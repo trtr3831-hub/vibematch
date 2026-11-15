@@ -1754,7 +1754,7 @@ function oturumAc(user) {
 
 async function hesapGiris() {
   const email = $('#authEmail').value.trim();
-  const sifre = $('#authSifre').value;
+  const sifre = $('#girisEkrani #authSifre').value;
   if (!sb) return girisMesaj('Sunucu bağlı değil. Demo ile devam edin.', true);
   if (!email || email.indexOf('@') < 1) return girisMesaj('Geçerli bir e-posta yazın (örn. ad@gmail.com).', true);
   if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı. Şu an alanda ' + sifre.length + ' karakter var.', true);
@@ -1766,7 +1766,7 @@ async function hesapGiris() {
 async function hesapKayit() {
   const ad = $('#authAd').value.trim();
   const email = $('#authEmail').value.trim();
-  const sifre = $('#authSifre').value;
+  const sifre = $('#girisEkrani #authSifre').value;
   if (!sb) return girisMesaj('Sunucu bağlı değil. Demo ile devam edin.', true);
   if (!ad) return girisMesaj('Adınızı yazın.', true);
   if (!email || email.indexOf('@') < 1) return girisMesaj('Geçerli bir e-posta yazın (örn. ad@gmail.com).', true);
@@ -1809,7 +1809,7 @@ function yeniSifreModu() {
 }
 
 async function yeniSifreKaydet() {
-  const sifre = $('#authSifre').value;
+  const sifre = $('#girisEkrani #authSifre').value;
   if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı. Şu an alanda ' + sifre.length + ' karakter var.', true);
   const {error} = await sb.auth.updateUser({password: sifre});
   if (error) return girisMesaj(hataMetni(error), true);
