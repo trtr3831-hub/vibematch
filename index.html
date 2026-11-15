@@ -1730,7 +1730,11 @@ function girisMesaj(t, hata) {
 
 function hataMetni(err) {
   const m = (err && err.message) || "";
-  if (m.indexOf("Invalid login") === 0) return "E-posta veya şifre hatalı.";
+  const k = m.toLowerCase();
+  if (k.indexOf("password") !== -1 && (k.indexOf("least") !== -1 || k.indexOf("short") !== -1)) return "Şifre çok kısa. En az 6 karakter yazın.";
+  if (k.indexOf("weak") !== -1 || k.indexOf("pwned") !== -1 || k.indexOf("breach") !== -1) return "Bu şifre çok yaygın, başka bir şifre deneyin.";
+  if (k.indexOf("rate limit") !== -1 || k.indexOf("too many") !== -1) return "Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar deneyin.";
+  if (k.indexOf("invalid login") === 0) return "E-posta veya şifre hatalı. Hesabınız yoksa üstten Kayıt sekmesini seçin.";
   if (m.indexOf("Email not confirmed") === 0) return "Önce e-postanızdaki doğrulama bağlantısına tıklayın.";
   if (m.indexOf("already registered") !== -1) return "Bu e-posta ile zaten kayıt var. Giriş yapın.";
   return m || "Bir hata oluştu, tekrar deneyin.";
