@@ -1,0 +1,2025 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VibeMatch · Eskişehir Prototip</title>
+<meta name="theme-color" content="#0d0818">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VibeMatch">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{--pembe:#ff2e88;--cyan:#00e5ff;--altin:#ffd166}
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(circle at 20% 0%,#2a0f45 0,#0b0716 50%) #0b0716;color:#f5f3ff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+  .telefon{width:100%;max-width:400px;height:100dvh;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:#0d0818}
+  @media (min-width:500px){.telefon{height:min(860px,94dvh);margin-top:3dvh;border-radius:36px;border:1px solid #3b2a5c;box-shadow:0 0 0 8px #120a1f,0 0 70px rgba(255,46,136,.25)}}
+  .neon{background:linear-gradient(90deg,var(--pembe),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .parla{box-shadow:0 0 18px rgba(255,46,136,.45)}
+  .kaydir{overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .kaydir::-webkit-scrollbar{display:none}
+  .giris{animation:giris .4s ease both}
+  @keyframes giris{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .pop{animation:pop .5s cubic-bezier(.2,.9,.3,1.3) both}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+  .halka{padding:2.5px;border-radius:999px;background:linear-gradient(45deg,var(--altin),var(--pembe),#7c3aed)}
+  .halka.goruldu{background:#3b2a5c}
+  .cubuk{height:3px;background:#ffffff40;border-radius:9px;overflow:hidden}
+  .cubuk>i{display:block;height:100%;width:0;background:#fff}
+  .eq{display:flex;align-items:flex-end;gap:2px;height:16px}
+  .eq span{width:3px;height:4px;background:var(--cyan);border-radius:2px}
+  .eq.cal span{animation:eq .9s ease-in-out infinite}
+  .eq.cal span:nth-child(2){animation-delay:.2s}
+  .eq.cal span:nth-child(3){animation-delay:.4s}
+  .eq.cal span:nth-child(4){animation-delay:.1s}
+  @keyframes eq{0%,100%{height:4px}50%{height:16px}}
+  .sekme[aria-current="true"]{color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,.7)}
+  .sekme[aria-current="true"] .ikon{transform:translateY(-2px) scale(1.15)}
+  .ikon{transition:transform .2s}
+  .cip{border:1px solid #ffffff26;border-radius:999px;padding:4px 10px;font-size:12px;background:#ffffff0d;white-space:nowrap}
+  .cip.secili{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(0,229,255,.35)}
+  .ortak{border-color:#00e5ff80!important;background:linear-gradient(90deg,#ff2e8840,#00e5ff40);color:#fff}
+
+  /* Açık tema: body.acik sınıfı ile etkinleşir */
+  body.acik{background:#f4f2fb;color:#1a1530}
+  body.acik .telefon{background:#ffffff;border-color:#e4def5}
+  body.acik .bg-\[\#0d0818\]{background:#ffffff}
+  body.acik .border-\[\#0d0818\]{border-color:#ffffff}
+  body.acik .bg-white\/5{background:rgba(0,0,0,.04)}
+  body.acik .bg-white\/10{background:rgba(0,0,0,.07)}
+  body.acik .border-white\/10{border-color:rgba(0,0,0,.1)}
+  body.acik .border-white\/20{border-color:rgba(0,0,0,.2)}
+  body.acik .bg-black\/50{background:rgba(0,0,0,.04)}
+  body.acik .text-slate-200{color:#2a2540}
+  body.acik .text-slate-300{color:#3b3550}
+  body.acik .text-slate-400{color:#6b6580}
+  body.acik .text-slate-500{color:#8a8599}
+  body.acik .text-cyan-300{color:#0e7490}
+  body.acik .sekme[aria-current="true"]{color:#0891b2;text-shadow:none}
+  body.acik .cip{border-color:rgba(0,0,0,.15);background:rgba(0,0,0,.03)}
+  body.acik .cip.secili{color:#0891b2;border-color:#0891b2;box-shadow:none}
+  body.acik .cubuk{background:rgba(0,0,0,.12)}
+  body.acik .cubuk>i{background:#1a1530}
+  body.acik .eq span{background:#0891b2}
+  body.acik #toast{background:#1a1530;color:#fff}
+  body.acik .ortak{color:#1a1530}
+  body.acik .kaydir::-webkit-scrollbar{display:none}
+  body.acik .neon{background:linear-gradient(90deg,#db2777,#0891b2);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* Açık tema: koyu temanın renklerini beyaza çevirir */
+  body.acik{background:#eef0f7;color:#1b1530}
+  .acik .telefon{background:#ffffff;color:#1b1530}
+  .acik .bg-\[\#0d0818\]{background:#ffffff !important}
+  .acik .bg-white\/5{background:rgba(0,0,0,.04) !important}
+  .acik .bg-white\/10{background:rgba(0,0,0,.08) !important}
+  .acik .bg-black\/50{background:rgba(255,255,255,.9) !important}
+  .acik .bg-black\/40{background:rgba(0,0,0,.08) !important}
+  .acik .border-white\/10{border-color:rgba(0,0,0,.12) !important}
+  .acik .border-white\/20{border-color:rgba(0,0,0,.25) !important}
+  .acik .text-slate-300,.acik .text-slate-400,.acik .text-slate-500{color:#5b5670 !important}
+  .acik .text-amber-300{color:#a35f00 !important}
+  .acik .text-cyan-300{color:#0a7d94 !important}
+  .acik .cip{background:rgba(0,0,0,.03)}
+  .acik .cip.secili{color:#0a7d94 !important;border-color:#0a7d94}
+  .acik .ortak{color:#1b1530 !important;background:linear-gradient(90deg,#ff2e8833,#00e5ff33)}
+  .acik .cubuk{background:rgba(0,0,0,.12)}
+  .acik .cubuk>i{background:#1b1530}
+  .acik .eq span{background:#0a7d94}
+  .acik #kart,.acik #kart *{color:#fff !important}
+  .acik #kart .bg-black\/50{background:rgba(0,0,0,.5) !important}
+  .acik #kart .bg-black\/40{background:rgba(0,0,0,.4) !important}
+  .acik #kart .cip{background:rgba(0,0,0,.35) !important}
+</style>
+</head>
+<body>
+<div class="telefon" id="telefon">
+  <header class="px-4 pt-4 pb-2 flex items-center justify-between">
+    <div class="text-2xl font-black neon">VibeMatch</div>
+    <div class="flex items-center gap-2"><div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
+  </header>
+
+  <main id="gorunum" class="flex-1 kaydir px-4 pb-4"></main>
+
+  <nav id="nav" class="grid grid-cols-5 border-t border-white/10 bg-black/50 backdrop-blur-xl pt-2 pb-[max(env(safe-area-inset-bottom),8px)]">
+    <button data-act="sekme" data-sekme="kesfet" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔥</span><span data-i18n="nav_kesfet">Keşfet</span></button>
+    <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
+    <button data-act="sekme" data-sekme="liderlik" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🏆</span><span data-i18n="nav_liderlik">Liderlik</span></button>
+    <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
+    <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
+  </nav>
+
+  <div id="modal" class="absolute inset-0 z-40 hidden"></div>
+  <div id="toast" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 py-2 rounded-full text-sm font-semibold shadow-lg whitespace-nowrap"></div>
+  <input type="file" id="hikayeDosya" accept="image/*" class="hidden">
+  <input type="file" id="profilDosya" accept="image/*" class="hidden">
+  <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
+    <div class="w-full max-w-xs text-center">
+      <div class="text-3xl font-black neon mb-1">VibeMatch</div>
+      <p class="text-xs text-slate-400 mb-6">Eskişehir'in üniversite öğrencileri için</p>
+      <div class="flex gap-2 mb-4">
+        <button data-act="authMod" data-m="giris" class="flex-1 py-2 rounded-full border border-white/20 text-sm">Giriş</button>
+        <button data-act="authMod" data-m="kayit" class="flex-1 py-2 rounded-full border border-white/20 text-sm">Kayıt</button>
+      </div>
+      <div id="authAdAlan" class="hidden mb-2"><input id="authAd" maxlength="30" placeholder="Adın" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400"></div>
+      <input id="authEmail" type="email" placeholder="E-posta" class="w-full mb-2 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+      <input id="authSifre" type="password" placeholder="Şifre (en az 6 karakter)" class="w-full mb-3 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+      <button id="authButon" data-act="authSubmit" data-m="giris" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Giriş yap</button>
+      <p id="girisMesaj" class="text-xs text-center min-h-[1rem] mt-3"></p>
+      <button data-act="sifreUnuttum" class="mt-2 text-xs text-cyan-300 underline">Şifremi unuttum</button>
+      <button data-act="demoGiris" class="mt-4 text-xs text-slate-400 underline">Demo ile devam et (sunucusuz)</button>
+    </div>
+  </div>
+</div>
+
+<script src="tailwind.js"></script>
+<script src="supabase.min.js"></script>
+<script>
+/* ---------- Yardımcılar ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const saat = () => new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+const ESK = 'Eskişehir';
+
+/* Gradient "fotoğraf" yer tutucuları. Gerçek uygulamada kullanıcı fotoğraflarıyla değiştirilir. */
+const GRAD = [
+  'linear-gradient(160deg,#ff2e88,#7c3aed 60%,#0b0716)',
+  'linear-gradient(160deg,#00e5ff,#2563eb 60%,#0b0716)',
+  'linear-gradient(160deg,#ffd166,#f97316 55%,#0b0716)',
+  'linear-gradient(160deg,#22c55e,#0d9488 55%,#0b0716)',
+  'linear-gradient(160deg,#a855f7,#ec4899 55%,#0b0716)',
+  'linear-gradient(160deg,#f43f5e,#be123c 55%,#0b0716)',
+  'linear-gradient(160deg,#38bdf8,#6366f1 55%,#0b0716)',
+  'linear-gradient(160deg,#fde047,#84cc16 55%,#0b0716)'
+];
+const VIBELAR = ['🎧 Müzik modu','🌙 Gece modu','☕ Sakin','🔥 Enerjik','🎮 Oyun modu','📚 Ders modu'];
+const SARKILAR = [
+  {b:'Gece Yolu', s:'Örnek Sanatçı'},
+  {b:'Porsuk Akşamı', s:'Demo Band'},
+  {b:'Kahve Molası', s:'Lo-fi Lab'},
+  {b:'Sabaha Kadar', s:'Gece Kulübü'}
+];
+const CEVAPLAR = ['Haha kesin 😂','Sen de bir kahve ister misin?','Bu hafta sonu sinema var mı?','Bence bu müzik tam sana göre 🎧','Tamam, akşam buluşuruz 🌙'];
+
+const BEN = {id:0, ad:'Sen', yas:21, sehir:ESK, bolum:'Üniversite öğrencisi', bio:'Kahve, kitap ve gece yürüyüşü ☕', ilgi:['Müzik','Kahve','Kitap','Sinema'], grad:GRAD[0]};
+
+/* Tanıtım amaçlı kurgusal profiller (gerçek kişi değil) */
+const KISILER = [
+  {id:1, ad:'Elif',   yas:20, sehir:ESK,      bolum:'Psikoloji · 2. sınıf',  bio:'Sabah kahvesi, eski kitapçılar, Porsuk kenarı 🚲', ilgi:['Kitap','Kahve','Bisiklet'], vibe:'☕ Sakin',     not:'Kütüphanedeyim, gelen var mı?', grad:GRAD[0], sarki:2, puan:1280},
+  {id:2, ad:'Mert',   yas:22, sehir:ESK,      bolum:'Mühendislik · 4. sınıf',bio:'Halı saha, sahil sabahları, kötü espri ⚽',        ilgi:['Müzik','Spor','Sinema'],    vibe:'🔥 Enerjik',   not:'Mod: Müzik 🎧',                grad:GRAD[1], sarki:1, puan:1110},
+  {id:3, ad:'Zeynep', yas:21, sehir:ESK,      bolum:'Mimarlık · 3. sınıf',   bio:'Çizim defteri her zaman çantada ✏️',             ilgi:['Kahve','Sanat','Kitap'],    vibe:'📚 Ders modu', not:'Maket yetişmiyor 😵',          grad:GRAD[4], sarki:0, puan:960},
+  {id:4, ad:'Kerem',  yas:23, sehir:'İzmir',  bolum:'Yazılım · Mezun',       bio:'Kod, kahve, sonra yine kod.',                    ilgi:['Müzik','Oyun','Teknoloji'], vibe:'🎮 Oyun modu', not:'Lobi açtım, gel 🎮',           grad:GRAD[6], sarki:3, puan:820},
+  {id:5, ad:'Ayşe',   yas:20, sehir:ESK,      bolum:'Turizm · 2. sınıf',     bio:'Seyahat planı yapıyorum, Sazova hep bekler 🧺',  ilgi:['Seyahat','Fotoğraf','Kahve'], vibe:'🌙 Gece modu', not:'Gece yürüyüşü? 🌙',            grad:GRAD[2], sarki:0, puan:700},
+  {id:6, ad:'Can',    yas:24, sehir:'Ankara', bolum:'Tıp · 5. sınıf',        bio:'Nöbet arası kısa molalar ☕',                    ilgi:['Spor','Müzik'],             vibe:'🎧 Müzik modu', not:'Uyanığım, kim var?',          grad:GRAD[5], sarki:1, puan:650},
+  {id:7, ad:'Defne',  yas:21, sehir:ESK,      bolum:'İletişim · 3. sınıf',   bio:'Podcast önerisi bekliyorum 🎙️',                 ilgi:['Müzik','Kitap','Sinema'],   vibe:'🔥 Enerjik',   not:'Yeni podcast önerin var mı?', grad:GRAD[4], sarki:3, puan:1040},
+  {id:8, ad:'Emre',   yas:22, sehir:'İstanbul', bolum:'Hukuk · 4. sınıf',    bio:'Vapurda müzik, Kadıköy\'de kahve.',              ilgi:['Müzik','Kahve','Spor'],     vibe:'☕ Sakin',     not:'Vapurdayım 🚢',                grad:GRAD[3], sarki:2, puan:590}
+];
+
+const kisi = id => KISILER.find(p => p.id == id);
+const ortakIlgi = p => p.ilgi.filter(i => BEN.ilgi.includes(i));
+const skor = p => (p.sehir === ESK ? 50 : 0) + ortakIlgi(p).length * 12 + Math.random() * 10;
+
+/* ---------- Durum ---------- */
+/* Yönetici e-postası: bu hesapla giriş yapınca Ayarlar'da yönetici paneli görünür */
+const ADMIN_EPOSTA = "trtr3831@gmail.com";
+
+const st = {
+  sekme: 'kesfet',
+  sira: 0,
+  deste: [],
+  animasyon: false,
+  eslesmeler: [1, 2],
+  sohbetler: {
+    1: [
+      {g:'them', t:'Selam! Eşleştik 😄', s:'21:02'},
+      {g:'me', t:'Merhaba! Porsuk kenarında mı takılıyorsun?', s:'21:03', d:'goruldu', gt:'21:04'},
+      {g:'them', t:'Evet, bu akşam kahve molası ☕🚲', s:'21:05'}
+    ],
+    2: [
+      {g:'them', t:'Bu hafta halı saha var mı?', s:'20:40'},
+      {g:'me', t:'Perşembe olabilir ⚽', s:'20:44', d:'iletildi'}
+    ]
+  },
+  okunmamis: {},
+  sohbetId: null,
+  vibe: VIBELAR[0],
+  benHikayeler: [],
+  acikYorum: null,
+  bekleyenFoto: null,
+  benFoto: null,
+  tema: "koyu",
+  kullanici: null,
+  sarki: null,
+  oturum: null,
+  dil: "tr",
+  engelli: [],
+  sikayetHedef: null,
+  fotoHedef: "profil",
+  authMod: "giris",
+  benHikayeSayi: 0,
+  hikayeler: [
+    {ad:'Elif',   grad:GRAD[0], metin:'Porsuk kenarı, sabah kahvesi ☕', goruldu:false, t: Date.now()},
+    {ad:'Mert',   grad:GRAD[1], metin:'Halı saha perşembe 😎', goruldu:false, t: Date.now()},
+    {ad:'Zeynep', grad:GRAD[4], metin:'Maket bitti, şimdi uyku 🛌', goruldu:false, t: Date.now()},
+    {ad:'Defne',  grad:GRAD[2], metin:'Yeni podcast bölümü çıktı 🎙️', goruldu:false, t: Date.now()}
+  ],
+  gonderiler: [
+    {id:1, yazar:'Mert',   sehir:ESK, metin:'Vapurda gün batımı… Eskişehir bugün başka güzel 🌅', grad:GRAD[2], begeni:42, begendim:false, zaman:'12 dk önce'},
+    {id:2, yazar:'Zeynep', sehir:ESK, metin:'Kütüphane sınavı bitti! Kim kahve ister? ☕',       grad:GRAD[3], begeni:27, begendim:false, zaman:'40 dk önce'},
+    {id:3, yazar:'Kerem',  sehir:'İzmir', metin:'Hafta sonu Sazova\'da piknik? 🧺',            grad:GRAD[6], begeni:18, begendim:false, zaman:'1 sa önce'},
+    {id:4, yazar:'Defne',  sehir:ESK, metin:'Bu akşamın playlist\'i hazır 🎧',                  grad:GRAD[4], begeni:65, begendim:false, zaman:'2 sa önce'}
+  ],
+  benGonderiler: [],
+  calan: false,
+  parca: 0,
+  ilerleme: 0,
+  kartCalan: false,
+  not: null,
+  toastZ: null,
+  hikayeZ: null
+};
+
+function puanHesapla() {
+  const alinanBegeni = st.benGonderiler.reduce((a, g) => a + g.begeni, 0);
+  return 240 + alinanBegeni * 10 + st.benHikayeSayi * 15 + st.eslesmeler.length * 5;
+}
+
+function notGetir() {
+  if (st.not && Date.now() - st.not.t < 864e5) return st.not;
+  return null;
+}
+function kalanMetin(n) {
+  const k = 864e5 - (Date.now() - n.t);
+  return Math.floor(k / 36e5) + ' sa ' + Math.floor((k % 36e5) / 6e4) + ' dk';
+}
+
+/* Öncelik: Eskişehir profilleri ve ortak ilgi alanları önde */
+function desteOlustur() {
+  st.deste = KISILER
+    .filter(p => !st.eslesmeler.includes(p.id) && !engelliMi(p.id))
+    .map(p => ({p, s: skor(p)}))
+    .sort((a, b) => b.s - a.s)
+    .map(x => x.p);
+  st.sira = 0;
+}
+
+/* ---------- Görünümler ---------- */
+function avatar(p, boyut) {
+  return `<div class="${boyut} rounded-full flex items-center justify-center font-black shrink-0" style="background:${p.grad}">${esc(p.ad[0])}</div>`;
+}
+
+function kesfetHTML() {
+  const p = st.deste[st.sira];
+  if (!p) return `
+    <div class="h-full flex flex-col items-center justify-center text-center gap-4 giris">
+      <div class="text-6xl">🌙</div>
+      <h2 class="text-2xl font-bold">Şimdilik bu kadar</h2>
+      <p class="text-slate-400 text-sm">Yeni profiller için biraz sonra tekrar bak.</p>
+      <button data-act="yenile" class="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Keşfi yenile</button>
+    </div>`;
+  const ort = ortakIlgi(p);
+  const m = SARKILAR[p.sarki];
+  return `
+  <div class="pt-1 giris">
+    <div class="flex justify-between items-center mb-3 text-xs text-slate-400">
+      <span>${st.sira + 1}/${st.deste.length}</span>
+      <span>Eskişehir öncelikli ✨</span>
+    </div>
+    <div id="kart" class="relative h-[56vh] min-h-[360px] rounded-3xl overflow-hidden select-none touch-none cursor-grab shadow-2xl" style="background:${p.grad}">
+      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none"></div>
+      <div class="absolute inset-0 flex items-center justify-center text-[120px] font-black opacity-20 pointer-events-none">${esc(p.ad[0])}</div>
+      <div class="absolute top-4 left-4 flex gap-2 flex-wrap">
+        <span class="cip bg-black/40">📍 ${esc(p.sehir)}${p.sehir === ESK ? ' ✓' : ''}</span>
+        <span class="cip bg-black/40">${esc(p.vibe)}</span>
+      </div>
+      <div id="dmg-sag" class="absolute top-6 right-6 rotate-12 border-4 border-emerald-400 text-emerald-400 font-black text-3xl px-3 rounded-lg opacity-0 pointer-events-none">BEĞEN</div>
+      <div id="dmg-sol" class="absolute top-6 left-6 -rotate-12 border-4 border-rose-500 text-rose-500 font-black text-3xl px-3 rounded-lg opacity-0 pointer-events-none">GEÇ</div>
+      <div class="absolute bottom-0 left-0 right-0 p-5 space-y-2">
+        <h2 class="text-3xl font-black">${esc(p.ad)}, ${p.yas}</h2>
+        <p class="text-sm text-slate-200">🎓 ${esc(p.bolum)}</p>
+        <p class="text-sm text-slate-300">${esc(p.bio)}</p>
+        <div class="flex flex-wrap gap-1.5 pt-1">${p.ilgi.map(i => `<span class="cip ${ort.includes(i) ? 'ortak' : ''}">${esc(i)}</span>`).join('')}</div>
+        <div class="flex items-center gap-3 bg-black/50 rounded-2xl px-3 py-2 mt-2">
+          <button data-act="kartmuzik" class="w-9 h-9 rounded-full bg-white text-black font-bold shrink-0">${st.kartCalan ? '❚❚' : '▶'}</button>
+          <div class="eq ${st.kartCalan ? 'cal' : ''}"><span></span><span></span><span></span><span></span></div>
+          <div class="text-xs min-w-0">
+            <div class="font-semibold truncate">🎵 ${esc(m.b)}</div>
+            <div class="text-slate-400 truncate">${esc(m.s)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-center items-center gap-6 mt-5">
+      <button data-act="gec" class="w-16 h-16 rounded-full bg-white/10 border border-rose-500/50 text-rose-400 text-2xl">✖</button>
+      <button data-act="begen" class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-3xl parla">💗</button>
+    </div>
+    <div class="flex justify-center gap-4 mt-3 text-xs"><button data-act="sikayetAc" data-tur="kisi" data-id="${p.id}" data-ad="${esc(p.ad)}" class="text-slate-400">🚩 Şikayet et</button><button data-act="engelleAc" data-id="${p.id}" class="text-slate-400">🚫 Engelle</button></div>
+    <p class="text-center text-[11px] text-slate-500 mt-4">Kartı sağa kaydır: beğen · sola kaydır: geç</p>
+  </div>`;
+}
+
+function sonHikaye() {
+  return st.benHikayeler.length ? st.benHikayeler[st.benHikayeler.length - 1].foto : null;
+}
+
+/* 24 saatten eski hikayeleri kaldirir; degisiklik olduysa true doner */
+function hikayeleriTemizle() {
+  const onceki = st.benHikayeler.length + st.hikayeler.length;
+  const sinir = Date.now() - 864e5;
+  st.benHikayeler = st.benHikayeler.filter(h => h.t > sinir);
+  st.hikayeler = st.hikayeler.filter(h => h.t > sinir);
+  return onceki !== st.benHikayeler.length + st.hikayeler.length;
+}
+
+function yorumlarHTML(g) {
+  if (st.acikYorum != g.id) return "";
+  const yorumlar = g.yorumlar || [];
+  const liste = yorumlar.map(y => `<div class="text-xs"><span class="font-semibold">${esc(y.ad)}</span> ${esc(y.metin)} <span class="text-slate-500">· ${esc(y.zaman)}</span></div>`).join("")
+    || `<div class="text-xs text-slate-500">Henüz yorum yok, ilk yorumu sen yaz!</div>`;
+  return `
+    <div class="px-4 pb-3 space-y-2 border-t border-white/10 pt-3">
+      <div class="space-y-1.5">${liste}</div>
+      <div class="flex gap-2">
+        <input id="yorum-${g.id}" maxlength="150" placeholder="Yorum yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs outline-none focus:border-cyan-400">
+        <button data-act="yorumGonder" data-id="${g.id}" class="px-3 rounded-full bg-cyan-400 text-black text-xs font-bold">Gönder</button>
+      </div>
+    </div>`;
+}
+
+function yorumGonder(id) {
+  const inp = document.getElementById("yorum-" + id);
+  const t = inp ? inp.value.trim() : "";
+  if (!t) return;
+  const g = [...st.benGonderiler, ...st.gonderiler].find(x => x.id == id);
+  if (!g) return;
+  g.yorumlar = g.yorumlar || [];
+  g.yorumlar.push({ad: "Sen", metin: t.slice(0, 150), zaman: "az önce"});
+  st.acikYorum = id;
+  render();
+  const yeni = document.getElementById("yorum-" + id);
+  if (yeni) yeni.focus();
+}
+
+function gonderiHTML(g) {
+  const yorumSayisi = (g.yorumlar || []).length;
+  const medya = g.foto
+    ? `<img src="${g.foto}" class="w-full max-h-[420px] object-cover">`
+    : `<div class="mx-3 mb-3 rounded-xl p-5 min-h-[130px] flex items-end text-lg font-semibold" style="background:${g.grad}">${esc(g.metin)}</div>`;
+  const metin = g.foto && g.metin ? `<div class="px-4 py-3 text-sm">${esc(g.metin)}</div>` : "";
+  const begeniDugmesi = g.benim
+    ? `<span class="text-slate-300">❤️ ${g.begeni}</span>`
+    : `<button data-act="begeniGonderi" data-id="${g.id}" class="flex items-center gap-1 ${g.begendim ? "text-pink-400" : "text-slate-300"}">${g.begendim ? "❤️" : "🤍"} ${g.begeni}</button>`;
+  return `
+      <article class="rounded-2xl bg-white/5 border border-white/10 mb-4 overflow-hidden giris">
+        <div class="flex items-center gap-3 p-3">
+          ${g.benim && st.benFoto ? `<img src="${st.benFoto}" class="w-9 h-9 rounded-full object-cover">` : `<div class="w-9 h-9 rounded-full" style="background:${g.grad}"></div>`}
+          <div>
+            <div class="font-semibold text-sm">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
+            <div class="text-[11px] text-slate-400">${esc(g.sehir)} · ${esc(g.zaman)}</div>
+          </div>
+        </div>
+        ${medya}
+        ${metin}
+        <div class="flex items-center gap-4 px-4 pb-3 pt-2 text-sm">
+          ${begeniDugmesi}
+          <button data-act="yorumAc" data-id="${g.id}" class="flex items-center gap-1 text-slate-300">💬 ${yorumSayisi}</button>
+          ${g.benim ? "" : `<button data-act="sikayetAc" data-tur="gonderi" data-ad="${esc(g.yazar)}" class="ml-auto text-xs text-slate-400">🚩 Bildir</button>`}
+        </div>
+        ${yorumlarHTML(g)}
+      </article>`;
+}
+
+function akisHTML() {
+  const son = sonHikaye();
+  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: son}, ...st.hikayeler];
+  const gonderiler = [
+    ...st.benGonderiler.map(g => ({...g, benim: true})),
+    ...st.gonderiler.filter(g => !engelliAd(g.yazar))
+  ];
+  return `
+  <div class="giris">
+    <div class="kaydir overflow-x-auto flex gap-4 py-3 -mx-4 px-4">
+      ${hikayeler.map((h, i) => `
+        <button data-act="${h.benim ? "hikayeben" : "hikaye"}" data-i="${i - 1}" class="flex flex-col items-center gap-1 shrink-0">
+          <div class="halka ${!h.benim && h.goruldu ? "goruldu" : ""}">
+            <div class="w-16 h-16 rounded-full border-2 border-[#0d0818] overflow-hidden relative flex items-center justify-center font-black text-xl" style="background:${h.grad}">
+              ${h.foto ? `<img src="${h.foto}" class="absolute inset-0 w-full h-full object-cover">` : ""}
+              <span class="relative">${h.benim ? (h.foto ? "" : "+") : esc(h.ad[0])}</span>
+            </div>
+          </div>
+          <span class="text-[11px] text-slate-300 w-16 truncate text-center">${h.benim ? "Hikayen" : esc(h.ad)}</span>
+        </button>`).join("")}
+    </div>
+
+    <div class="rounded-2xl bg-white/5 border border-white/10 p-3 mb-4">
+      <textarea id="gonderiMetin" rows="2" maxlength="180" placeholder="Bugün Eskişehir&#39;de ne oluyor?" class="w-full bg-transparent outline-none text-sm resize-none"></textarea>
+      <input type="file" id="gonderiDosya" accept="image/*" class="hidden">
+      <div class="flex justify-between items-center mt-2">
+        <div class="flex items-center gap-2">
+          <button data-act="fotoSec" class="px-3 py-1.5 rounded-full border border-white/20 text-xs">📷 ${st.bekleyenFoto ? "Fotoğraf seçildi ✓" : "Fotoğraf"}</button>
+          <span class="text-[11px] text-slate-500">Beğeni aldıkça puan</span>
+        </div>
+        <button data-act="paylas" class="px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-sm font-bold">Paylaş</button>
+      </div>
+    </div>
+
+    ${gonderiler.map(gonderiHTML).join("")}
+  </div>`;
+}
+function profilGonderiHTML() {
+  if (!st.benGonderiler.length) return `<p class="text-xs text-slate-500 text-center">Henüz gönderin yok. Akış sekmesinden paylaşabilirsin.</p>`;
+  return `<div class="grid grid-cols-3 gap-1">${st.benGonderiler.map(g => `
+    <div class="aspect-square rounded-lg overflow-hidden relative" style="background:${g.grad}">
+      ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
+      <span class="absolute bottom-1 right-1 text-[10px] bg-black/50 rounded px-1">❤️ ${g.begeni}</span>
+    </div>`).join("")}</div>`;
+}
+
+
+function liderHTML() {
+  const liste = [
+    ...KISILER.filter(p => !engelliMi(p.id)).map(p => ({ad: p.ad, sehir: p.sehir, puan: p.puan, grad: p.grad})),
+    {ad: 'Sen', sehir: ESK, puan: puanHesapla(), grad: BEN.grad, benim: true}
+  ].sort((a, b) => b.puan - a.puan).slice(0, 10);
+  return `
+  <div class="giris">
+    <div class="text-center py-3">
+      <div class="text-5xl">👑</div>
+      <h2 class="text-2xl font-black neon mt-1">Eskişehir'in En Popülerleri</h2>
+      <p class="text-xs text-slate-400 mt-1">Hikaye ve gönderilerin beğeni aldıkça puan kazan, ilk 10'a gir.</p>
+    </div>
+    <ol class="space-y-2">
+      ${liste.map((p, i) => `
+        <li class="flex items-center gap-3 p-3 rounded-2xl border ${i === 0 ? 'border-amber-300/60 bg-amber-300/10 parla' : 'border-white/10 bg-white/5'} ${p.benim ? 'ring-2 ring-cyan-400' : ''}">
+          <span class="w-7 text-center font-black ${i < 3 ? 'text-amber-300' : 'text-slate-400'}">${i === 0 ? '👑' : i + 1}</span>
+          ${p.benim && st.benFoto ? `<img src="${st.benFoto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full shrink-0" style="background:${p.grad}"></div>`}
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold truncate">${esc(p.ad)}${p.benim ? ' (sen)' : ''}</div>
+            <div class="text-[11px] text-slate-400">${esc(p.sehir)}</div>
+          </div>
+          <div class="font-black text-amber-300">${p.puan} <span class="text-[10px] text-slate-400">puan</span></div>
+        </li>`).join('')}
+    </ol>
+    <div class="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 space-y-1">
+      <div>❤️ Her gönderi beğenisi: +10 puan</div>
+      <div>📸 Her hikaye paylaşımı: +15 puan</div>
+      <div>💞 Her eşleşme: +5 puan</div>
+    </div>
+  </div>`;
+}
+
+function balon(x, i, id) {
+  const karsidan = x.g === "them";
+  let medya = "";
+  if (x.foto) {
+    medya = karsidan && !x.acik
+      ? `<div class="relative rounded-xl overflow-hidden mb-1"><img src="${x.foto}" class="w-full max-h-60 object-cover blur-xl"><button data-act="fotoAc" data-id="${id}" data-i="${i}" class="absolute inset-0 text-xs font-bold bg-black/30">Fotoğrafı göster</button></div>`
+      : `<img src="${x.foto}" class="w-full max-h-60 object-cover rounded-xl mb-1">`;
+  }
+  const bildir = karsidan && x.foto
+    ? `<button data-act="sikayetAc" data-tur="foto" data-id="${id}" data-ad="${esc(kisi(id).ad)}" class="ml-2 text-slate-400">🚩 Bildir</button>`
+    : "";
+  if (karsidan) return `
+    <div class="flex"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-bl-sm bg-white/10 text-sm">
+      ${medya}${x.t ? esc(x.t) : ""}<div class="text-[10px] text-slate-400 mt-0.5">${x.s}${bildir}</div>
+    </div></div>`;
+  const durum = x.d === "goruldu" ? `Görüldü ✓✓ (Saat: ${x.gt})` : "İletildi ✓";
+  return `
+    <div class="flex justify-end"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-pink-500 to-fuchsia-600 text-sm">
+      ${medya}${x.t ? esc(x.t) : ""}<div class="text-[10px] ${x.d === "goruldu" ? "text-cyan-200" : "text-white/70"} mt-0.5 text-right">${x.s} · ${durum}</div>
+    </div></div>`;
+}
+
+/* Fotoğrafı küçültüp gönderir (en uzun kenar en fazla 800px) */
+function resimKucult(dosya, enBuyuk, cb) {
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, enBuyuk / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      cb(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(dosya);
+}
+
+function sohbetFotoGonder(id, url) {
+  if (id == null) return;
+  const m = st.sohbetler[id] || (st.sohbetler[id] = []);
+  const yeni = {g: "me", t: "", s: saat(), d: "iletildi", foto: url};
+  m.push(yeni);
+  render();
+  setTimeout(() => {
+    yeni.d = "goruldu";
+    yeni.gt = saat();
+    if (st.sohbetId == id && st.sekme === "mesajlar") render();
+  }, 1500);
+  toast("Fotoğraf gönderildi 📷");
+}
+
+function sohbetHTML(id) {
+  const p = kisi(id);
+  const m = st.sohbetler[id] || [];
+  return `
+  <div class="flex flex-col min-h-full giris">
+    <div class="flex items-center gap-3 pb-3 border-b border-white/10 sticky top-0 bg-[#0d0818] z-10">
+      <button data-act="sohbetKapat" class="text-xl px-2">←</button>
+      ${avatar(p, 'w-10 h-10 text-base')}
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold">${esc(p.ad)}</div>
+        <div class="text-[11px] text-slate-400">${esc(p.vibe)} · ${esc(p.sehir)}</div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-4 text-xs py-1"><button data-act="sikayetAc" data-tur="kisi" data-id="${id}" data-ad="${esc(p.ad)}" class="text-slate-400">🚩 Şikayet et</button><button data-act="engelleAc" data-id="${id}" class="text-slate-400">🚫 Engelle</button></div>
+    <div class="flex-1 space-y-2 py-3">${m.map((x, i) => balon(x, i, id)).join('')}</div>
+    <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
+      <button data-act="sohbetFotoSec" class="px-3 rounded-full border border-white/20 text-sm">📷</button>
+      <input type="file" id="sohbetDosya" accept="image/*" class="hidden">
+      <input id="mesajGiris" maxlength="200" placeholder="Bir mesaj yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 outline-none focus:border-cyan-400 text-sm">
+      <button data-act="gonder" data-id="${id}" class="px-4 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Gönder</button>
+    </div>
+  </div>`;
+}
+
+function mesajHTML() {
+  if (st.sohbetId != null) return sohbetHTML(st.sohbetId);
+  if (!aktifEslesmeler().length) return `<div class="text-center text-slate-400 py-20">Henüz eşleşmen yok. Keşfet sekmesinde kaydır! 💗</div>`;
+  return `
+  <div class="giris">
+    <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Eşleşmeler</h3>
+    <div class="kaydir overflow-x-auto flex gap-4 mb-5 -mx-4 px-4">
+      ${aktifEslesmeler().map(id => {
+        const p = kisi(id);
+        return `<button data-act="sohbetAc" data-id="${id}" class="flex flex-col items-center gap-1 shrink-0">
+          <div class="halka"><div class="w-14 h-14 rounded-full border-2 border-[#0d0818] flex items-center justify-center font-black" style="background:${p.grad}">${esc(p.ad[0])}</div></div>
+          <span class="text-[11px] text-slate-300">${esc(p.ad)}</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Mesajlar</h3>
+    <div class="space-y-2">
+      ${aktifEslesmeler().map(id => {
+        const p = kisi(id);
+        const m = st.sohbetler[id] || [];
+        const son = m[m.length - 1];
+        const ok = st.okunmamis[id] || 0;
+        const onizleme = son ? (son.g === 'me' ? 'Sen: ' : '') + esc(son.t) : '';
+        return `
+        <button data-act="sohbetAc" data-id="${id}" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-left">
+          ${avatar(p, 'w-12 h-12 text-lg')}
+          <div class="flex-1 min-w-0">
+            <div class="inline-block max-w-full truncate text-[10px] bg-white text-black rounded-xl px-2 py-0.5 mb-1">${esc(p.not)}</div>
+            <div class="font-semibold text-sm">${esc(p.ad)}</div>
+            <div class="text-xs text-slate-400 truncate">${onizleme}</div>
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="text-[10px] text-slate-500">${son ? son.s : ''}</span>
+            ${ok ? `<span class="min-w-[18px] h-[18px] px-1 rounded-full bg-pink-500 text-[10px] font-bold flex items-center justify-center">${ok}</span>` : ''}
+          </div>
+        </button>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function profilHTML() {
+  const n = notGetir();
+  const parca = SARKILAR[st.parca];
+  const toplamBegeni = st.benGonderiler.reduce((a, g) => a + g.begeni, 0);
+  const notBaloncugu = n ? `<div class="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap max-w-[240px] truncate bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-2xl">${esc(n.metin)}</div>` : "";
+  const notKutusu = n ? `<div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center gap-2 mb-2">
+               <span class="text-sm">${esc(n.metin)}</span>
+               <span class="text-[11px] text-slate-400 whitespace-nowrap">${kalanMetin(n)} kaldı</span>
+             </div>` : "";
+  return `
+  <div class="giris pb-6">
+    <div class="flex flex-col items-center text-center pt-6">
+      <div class="relative mt-8">
+        ${notBaloncugu}
+        <div class="halka goruldu">
+          <div data-act="profilFoto" class="cursor-pointer w-24 h-24 rounded-full border-4 border-[#0d0818] overflow-hidden flex items-center justify-center text-4xl font-black" style="background:${BEN.grad}">${st.benFoto ? `<img src="${st.benFoto}" class="w-full h-full object-cover">` : "S"}</div>
+        </div>
+      </div>
+      <h2 class="mt-3 text-2xl font-black">${BEN.ad}, ${BEN.yas}</h2>
+      <p class="text-sm text-slate-400">📍 ${esc(BEN.sehir)} · ${esc(BEN.bolum)}</p>
+      <p class="text-sm mt-1">${esc(BEN.bio)}</p>
+      <button data-act="profilFoto" class="text-xs text-cyan-300 underline mt-2">📷 Galeriden fotoğraf seç</button>
+      ${st.kullanici ? `<div class="text-[11px] text-slate-500 mt-1">${esc(st.kullanici.email)} · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button></div>` : ""}
+      <div class="flex gap-6 mt-4 text-center">
+        <div><div class="font-black text-lg text-amber-300">${puanHesapla()}</div><div class="text-[11px] text-slate-400">puan</div></div>
+        <div><div class="font-black text-lg">${st.eslesmeler.length}</div><div class="text-[11px] text-slate-400">eşleşme</div></div>
+        <div><div class="font-black text-lg">${toplamBegeni}</div><div class="text-[11px] text-slate-400">beğeni</div></div>
+      </div>
+    </div>
+
+    <section class="mt-6">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Gönderilerin</h3>
+      ${profilGonderiHTML()}
+    </section>
+
+    <section class="mt-6">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Tema</h3>
+      <div class="flex gap-2">
+        <button data-act="tema" data-t="koyu" class="cip ${st.tema === "koyu" ? "secili" : ""}">🌙 Koyu</button>
+        <button data-act="tema" data-t="acik" class="cip ${st.tema === "acik" ? "secili" : ""}">☀️ Açık</button>
+      </div>
+    </section>
+
+    <section class="mt-6">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Ruh halin</h3>
+      <div class="flex flex-wrap gap-2">
+        ${VIBELAR.map(v => `<button data-act="vibe" data-v="${v}" class="cip ${st.vibe === v ? "secili" : ""}">${v}</button>`).join("")}
+      </div>
+    </section>
+
+    <section class="mt-6">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Notun (24 saat görünür)</h3>
+      ${notKutusu}
+      <div class="flex gap-2">
+        <input id="notGiris" maxlength="60" placeholder="Ne düşünüyorsun? (60 karakter)" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
+        <button data-act="notKaydet" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Paylaş</button>
+      </div>
+    </section>
+
+    <section class="mt-6">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Şu an dinlediğin şarkı</h3>
+      ${st.sarki ? `<iframe src="${st.sarki.embed}" class="w-full rounded-2xl" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture" loading="lazy"></iframe>
+        <button data-act="sarkiSil" class="mt-2 text-xs text-rose-400 underline">Şarkıyı kaldır</button>` : `<p class="text-xs text-slate-500 mb-2">Spotify veya YouTube bağlantısı yapıştır, şarkın burada çalsın.</p>`}
+      <div class="flex gap-2 mt-2">
+        <input id="sarkiLink" placeholder="https://open.spotify.com/track/..." class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
+        <button data-act="sarkiEkle" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Ekle</button>
+      </div>
+    </section>
+  </div>`;
+}
+
+/* ---------- Ayarlar: tema ve şifre ---------- */
+async function hashle(s) {
+  try {
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(d)).map(x => x.toString(16).padStart(2, "0")).join("");
+  } catch (err) {
+    let h = 0;
+    for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
+    return "yedek" + h;
+  }
+}
+
+/* ---------- Hesaplar: e-posta ile kayıt ve giriş (bu tarayıcıda yerel) ---------- */
+function hesaplar() {
+  try { return JSON.parse(localStorage.getItem("vm_hesaplar") || "{}"); } catch (err) { return {}; }
+}
+function hesapKaydet(h) {
+  try { localStorage.setItem("vm_hesaplar", JSON.stringify(h)); return true; } catch (err) { return false; }
+}
+
+function girisYap(eposta) {
+  st.oturum = eposta;
+  try { localStorage.setItem("vm_oturum", eposta); } catch (err) {}
+  toast("Hoş geldin! 👋");
+  render();
+}
+
+function cikis() {
+  st.oturum = null;
+  try { localStorage.removeItem("vm_oturum"); } catch (err) {}
+  st.sekme = "kesfet";
+  toast("Çıkış yapıldı");
+  render();
+}
+
+function girisHTML() {
+  const kayitMi = st.authMod === "kayit";
+  const girdi = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
+  return `
+  <div class="giris pt-6 pb-6 space-y-5">
+    <div class="text-center">
+      <div class="text-5xl">💘</div>
+      <h2 class="text-2xl font-black neon mt-2">${t("giris_baslik")}</h2>
+      <p class="text-xs text-slate-400 mt-1">${t("giris_alt")}</p>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button data-act="authSekme" data-m="giris" class="cip py-2.5 ${kayitMi ? "" : "secili"}">${t("giris_sekme")}</button>
+      <button data-act="authSekme" data-m="kayit" class="cip py-2.5 ${kayitMi ? "secili" : ""}">${t("kayit_sekme")}</button>
+    </div>
+    <div class="space-y-2">
+      <input id="authEposta" type="email" placeholder="${t("eposta")}" autocomplete="email" class="${girdi}">
+      <input id="authSifre" type="password" placeholder="${t("sifre")}" autocomplete="${kayitMi ? "new-password" : "current-password"}" class="${girdi}">
+      ${kayitMi ? `<div><label class="text-xs text-slate-400">${t("dogum")}</label><input id="authDogum" type="date" max="${enAzYasTarihi()}" class="${girdi} mt-1"></div>` : ""}
+      ${kayitMi ? `<input id="authSifreTekrar" type="password" placeholder="${t("sifre_tekrar")}" autocomplete="new-password" class="${girdi}">` : ""}
+      <button data-act="authGonder" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">${kayitMi ? t("gonder_kayit") : t("gonder_giris")}</button>
+      <p id="authMesaj" class="text-xs text-center min-h-[16px]"></p>
+    </div>
+    ${dilHTML()}
+  </div>`;
+}
+
+async function authGonder() {
+  const eposta = ($("#authEposta").value || "").trim().toLowerCase();
+  const sifre = $("#authSifre").value;
+  const msg = (t, ok) => {
+    const m = $("#authMesaj");
+    if (m) { m.textContent = cevir(t); m.className = "text-xs text-center min-h-[16px] " + (ok ? "text-emerald-400" : "text-rose-400"); }
+  };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return msg("Geçerli bir e-posta adresi gir.", false);
+  if (sifre.length < 6) return msg("Şifre en az 6 karakter olmalı.", false);
+  const h = hesaplar();
+  const sh = await hashle(sifre);
+  if (st.authMod === "kayit") {
+    const tekrarEl = $("#authSifreTekrar");
+    if (tekrarEl && tekrarEl.value !== sifre) return msg("Şifreler eşleşmiyor.", false);
+    const dogum = ($("#authDogum") || {}).value || "";
+    if (!dogum) return msg("Doğum tarihini gir.", false);
+    if (yasHesapla(dogum) < 18) return msg("Bu uygulama yalnızca 18 yaş ve üzeri kullanıcılar içindir.", false);
+    if (h[eposta]) return msg("Bu e-posta ile zaten kayıt var. Giriş yap sekmesini kullan.", false);
+    h[eposta] = sh;
+    if (!hesapKaydet(h)) return msg("Kayıt yapılamadı (tarayıcı depolaması kapalı).", false);
+    try {
+      const yaslar = JSON.parse(localStorage.getItem("vm_yaslar") || "{}");
+      yaslar[eposta] = dogum;
+      localStorage.setItem("vm_yaslar", JSON.stringify(yaslar));
+    } catch (err) {}
+  } else {
+    if (!h[eposta]) return msg("Bu e-posta ile kayıt bulunamadı.", false);
+    if (h[eposta] !== sh) return msg("Şifre yanlış.", false);
+  }
+  const askida = askidaListesi()[eposta];
+  if (askida) return msg("Hesabın askıya alındı. Gerekçe: " + askida.gerekce, false);
+  girisYap(eposta);
+}
+
+/* Giriş yapmış kişi kendi şifresini değiştirir */
+async function sifreKaydet() {
+  const eski = $("#sifreEski");
+  const yeni = $("#sifreYeni");
+  const tekrar = $("#sifreTekrar");
+  const msg = (t, ok) => {
+    const m = $("#sifreMesaj");
+    if (m) { m.textContent = cevir(t); m.className = "text-xs mt-2 " + (ok ? "text-emerald-400" : "text-rose-400"); }
+  };
+  if (yeni.value.length < 6) return msg("Yeni şifre en az 6 karakter olmalı.", false);
+  if (yeni.value !== tekrar.value) return msg("Yeni şifreler eşleşmiyor.", false);
+  const h = hesaplar();
+  if (await hashle(eski.value) !== h[st.oturum]) return msg("Mevcut şifre yanlış.", false);
+  h[st.oturum] = await hashle(yeni.value);
+  if (!hesapKaydet(h)) return msg("Şifre kaydedilemedi (tarayıcı depolaması kapalı).", false);
+  toast("Şifren değiştirildi ✅");
+  render();
+}
+
+function ayarlarHTML() {
+  const girdi = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
+  return `
+  <div class="giris pb-6 space-y-6 pt-2">
+    <h2 class="text-2xl font-black neon">Ayarlar</h2>
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Hesap</h3>
+      <p class="text-sm mb-3">${esc(st.oturum)}</p>
+      <button data-act="cikis" class="w-full py-2.5 rounded-full border border-white/20 text-sm">Çıkış yap</button>
+    </section>
+
+    ${dilHTML()}
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Tema</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <button data-act="tema" data-t="koyu" class="cip py-3 ${st.tema === "koyu" ? "secili" : ""}">🌙 Koyu</button>
+        <button data-act="tema" data-t="acik" class="cip py-3 ${st.tema === "acik" ? "secili" : ""}">☀️ Açık</button>
+      </div>
+    </section>
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Bildirimler</h3>
+      <div class="space-y-2">${bildirimlerHTML()}</div>
+    </section>
+
+    ${isAdmin() ? `<section><button data-act="sekme" data-sekme="admin" class="w-full py-2.5 rounded-full border border-amber-300/60 text-amber-300 text-sm font-bold">🛡️ Yönetici paneli</button></section>` : ""}
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Engellenenler</h3>
+      <div class="space-y-2">${engellenenlerHTML()}</div>
+    </section>
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Şifre değiştir</h3>
+      <div class="space-y-2">
+        <input id="sifreEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password" class="${girdi}">
+        <input id="sifreYeni" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password" class="${girdi}">
+        <input id="sifreTekrar" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" class="${girdi}">
+        <button data-act="sifreKaydet" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Şifreyi değiştir</button>
+        <p id="sifreMesaj" class="text-xs mt-2"></p>
+      </div>
+    </section>
+  </div>`;
+}
+
+/* Yaş hesabı: doğum tarihinden bugüne kadar kaç yıl geçtiği */
+function yasHesapla(dogum) {
+  const b = new Date(dogum);
+  const n = new Date();
+  let y = n.getFullYear() - b.getFullYear();
+  const ay = n.getMonth() - b.getMonth();
+  if (ay < 0 || (ay === 0 && n.getDate() < b.getDate())) y--;
+  return y;
+}
+
+/* Doğum tarihi alanında seçilebilecek en son tarih: bugünden 18 yıl önce */
+function enAzYasTarihi() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ---------- Engelleme, şikayet ve fotoğraf kuralları ---------- */
+const SIKAYET_NEDENLERI = ["Sahte profil", "Uygunsuz fotoğraf", "Taciz veya tehdit", "Dolandırıcılık veya reklam", "Yaşının 18'den küçük olduğu şüphesi", "Diğer"];
+
+function engelliMi(id) { return st.engelli.includes(Number(id)); }
+function engelliAd(ad) { return KISILER.some(p => p.ad === ad && engelliMi(p.id)); }
+function aktifEslesmeler() { return st.eslesmeler.filter(id => !engelliMi(id)); }
+
+function kaydetListe(anahtar, deger) {
+  try { localStorage.setItem(anahtar, JSON.stringify(deger)); } catch (err) {}
+}
+function okuListe(anahtar) {
+  try { return JSON.parse(localStorage.getItem(anahtar) || "[]"); } catch (err) { return []; }
+}
+
+/* Şikayet: yerel kayıt (gerçek moderasyon için sunucu gerekir) */
+function sikayetAc(tur, id, ad) {
+  st.sikayetHedef = {tur, id, ad};
+  modalAc(`
+    <div class="h-full bg-black/80 flex items-center justify-center p-6 giris">
+      <div class="w-full max-w-xs bg-[#0d0818] rounded-2xl p-5 border border-white/10 space-y-3">
+        <h3 class="font-black text-lg">Şikayet et</h3>
+        <p class="text-xs text-slate-400">${esc(ad)} için bir neden seç. Şikayetler incelenir.</p>
+        <div class="space-y-2">
+          ${SIKAYET_NEDENLERI.map((n, i) => `<button data-act="sikayetGonder" data-i="${i}" class="w-full text-left px-3 py-2 rounded-xl border border-white/10 text-sm">${esc(n)}</button>`).join("")}
+        </div>
+        <button data-act="modalKapat" class="w-full py-2 text-xs text-slate-400">Vazgeç</button>
+      </div>
+    </div>`);
+}
+
+function sikayetGonder(i) {
+  const h = st.sikayetHedef;
+  if (!h) return;
+  const kayitlar = okuListe("vm_sikayet");
+  kayitlar.push({tur: h.tur, hedef: h.ad, neden: SIKAYET_NEDENLERI[i], t: Date.now(), hedefEposta: h.eposta || null});
+  kaydetListe("vm_sikayet", kayitlar);
+  st.sikayetHedef = null;
+  modalKapat();
+  toast("Şikayetin alındı, inceleyeceğiz 🙏");
+}
+
+/* Engelleme: engellenen kişi bir daha görünmez ve mesaj atamaz */
+function engelleAc(id) {
+  const p = kisi(id);
+  if (!p) return;
+  modalAc(`
+    <div class="h-full bg-black/80 flex items-center justify-center p-6 giris">
+      <div class="w-full max-w-xs bg-[#0d0818] rounded-2xl p-5 border border-white/10 space-y-3">
+        <h3 class="font-black text-lg">${esc(p.ad)} engellensin mi?</h3>
+        <p class="text-xs text-slate-400">Engellediğin kişi seni göremez, sana mesaj atamaz ve sen de onu görmezsin. Ayarlar'dan engeli kaldırabilirsin.</p>
+        <button data-act="engelOnay" data-id="${p.id}" class="w-full py-2.5 rounded-full bg-rose-500 font-bold text-sm">Engelle</button>
+        <button data-act="modalKapat" class="w-full py-2 text-xs text-slate-400">Vazgeç</button>
+      </div>
+    </div>`);
+}
+
+function engelOnay(id) {
+  const n = Number(id);
+  if (!engelliMi(n)) st.engelli.push(n);
+  kaydetListe("vm_engel", st.engelli);
+  st.eslesmeler = st.eslesmeler.filter(x => x !== n);
+  delete st.sohbetler[n];
+  st.deste = st.deste.slice(0, st.sira).filter(p => !engelliMi(p.id))
+    .concat(st.deste.slice(st.sira).filter(p => !engelliMi(p.id)));
+  if (st.sohbetId == n) st.sohbetId = null;
+  modalKapat();
+  toast("Engellendi 🚫");
+  render();
+}
+
+function engelKaldir(id) {
+  st.engelli = st.engelli.filter(x => x !== Number(id));
+  kaydetListe("vm_engel", st.engelli);
+  toast("Engel kaldırıldı");
+  render();
+}
+
+function engellenenlerHTML() {
+  const liste = st.engelli.map(id => kisi(id)).filter(Boolean);
+  if (!liste.length) return `<p class="text-xs text-slate-500">Engellediğin kimse yok.</p>`;
+  return liste.map(p => `
+    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
+      <span class="text-sm">${esc(p.ad)}</span>
+      <button data-act="engelKaldir" data-id="${p.id}" class="text-xs px-3 py-1.5 rounded-full border border-white/20">Engeli kaldır</button>
+    </div>`).join("");
+}
+
+/* Fotoğraf kuralları: yüklemeden önce onay alınır */
+function fotoKurallari(hedef) {
+  st.fotoHedef = hedef;
+  modalAc(`
+    <div class="h-full bg-black/80 flex items-center justify-center p-6 giris">
+      <div class="w-full max-w-xs bg-[#0d0818] rounded-2xl p-5 border border-white/10 space-y-3">
+        <h3 class="font-black text-lg">Fotoğraf kuralları</h3>
+        <ul class="text-xs text-slate-300 space-y-1 list-disc pl-4">
+          <li>Sadece kendi gerçek fotoğrafını yükle.</li>
+          <li>Yüzün net ve tek kişi olarak görünmeli.</li>
+          <li>Başkasının, ünlü veya internetten alınmış fotoğrafları yasak.</li>
+          <li>Filtre ağırlıklı, karikatür, grup veya çıplaklık ya da şiddet içeren fotoğraflar yasak.</li>
+        </ul>
+        <label class="flex items-start gap-2 text-xs">
+          <input id="fotoOnayKutu" type="checkbox" class="mt-0.5"> Kuralları okudum, bu fotoğraf bana ait ve gerçek.
+        </label>
+        <button data-act="fotoOnay" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Fotoğraf seç</button>
+        <button data-act="modalKapat" class="w-full py-2 text-xs text-slate-400">Vazgeç</button>
+      </div>
+    </div>`);
+}
+
+function fotoOnayla() {
+  const kutu = $("#fotoOnayKutu");
+  if (!kutu || !kutu.checked) { toast("Önce kuralları onaylamalısın"); return; }
+  const girdi = {gonderi: "#gonderiDosya", sohbet: "#sohbetDosya"}[st.fotoHedef] || "#profilDosya";
+  modalKapat();
+  $(girdi).click();
+}
+
+/* ---------- Yönetici paneli: şikayet kuyruğu, gerekçeli işlemler, denetim kaydı ---------- */
+function isAdmin() { return !!st.oturum && st.oturum === ADMIN_EPOSTA; }
+
+function askidaListesi() {
+  try { return JSON.parse(localStorage.getItem("vm_askida") || "{}"); } catch (err) { return {}; }
+}
+function bildirimListesi() {
+  try { return JSON.parse(localStorage.getItem("vm_bildirim") || "{}"); } catch (err) { return {}; }
+}
+function denetimEkle(kayit) {
+  const d = okuListe("vm_denetim");
+  d.push(kayit);
+  kaydetListe("vm_denetim", d);
+}
+function kaydetObjeler(anahtar, obj) {
+  try { localStorage.setItem(anahtar, JSON.stringify(obj)); } catch (err) {}
+}
+
+function adminHTML() {
+  if (!isAdmin()) return `<p class="text-sm text-slate-400">Bu sayfaya erişim yetkin yok.</p>`;
+  const raporlar = okuListe("vm_sikayet").map((r, i) => ({...r, sira: i})).reverse();
+  const denetim = okuListe("vm_denetim").slice(-20).reverse();
+  const satir = (r) => `
+    <div class="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2 ${r.kapali ? "opacity-50" : ""}">
+      <div class="text-sm font-semibold">${esc(r.hedef)} <span class="text-[11px] text-slate-400">· ${esc(r.tur)}</span></div>
+      <div class="text-xs text-slate-300">Neden: ${esc(r.neden)}</div>
+      <div class="text-[11px] text-slate-500">${tarih(r.t)} · ${r.hedefEposta ? esc(r.hedefEposta) : "hesap bağlı değil (örnek profil)"}</div>
+      ${r.kapali ? `<div class="text-[11px] text-slate-400">Kapatıldı</div>` : `
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button data-act="adminIslem" data-t="${r.t}" data-islem="uyar" class="text-xs px-3 py-1.5 rounded-full border border-white/20">Uyar</button>
+        <button data-act="adminIslem" data-t="${r.t}" data-islem="askiya" class="text-xs px-3 py-1.5 rounded-full border border-white/20">Askıya al</button>
+        <button data-act="adminIslem" data-t="${r.t}" data-islem="sil" class="text-xs px-3 py-1.5 rounded-full border border-rose-500/50 text-rose-400">Hesabı sil</button>
+        <button data-act="adminIslem" data-t="${r.t}" data-islem="kapat" class="text-xs px-3 py-1.5 rounded-full border border-white/20">Kapat</button>
+      </div>`}
+    </div>`;
+  return `
+  <div class="giris pb-6 space-y-6 pt-2">
+    <div class="flex items-center gap-3">
+      <button data-act="sekme" data-sekme="ayarlar" class="text-xl px-2">←</button>
+      <h2 class="text-2xl font-black neon">Yönetici paneli</h2>
+    </div>
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Şikayet kuyruğu (${raporlar.length})</h3>
+      <div class="space-y-2">${raporlar.map(satir).join("") || `<p class="text-xs text-slate-500">Şikayet yok.</p>`}</div>
+    </section>
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Denetim kaydı (son 20)</h3>
+      <div class="space-y-1 text-[11px] text-slate-300">
+        ${denetim.map(d => `<div>${tarih(d.t)} · ${esc(d.islem)} · ${esc(d.hedef || "-")} · gerekçe: ${esc(d.gerekce)}</div>`).join("") || `<p class="text-slate-500">Kayıt yok.</p>`}
+      </div>
+    </section>
+  </div>`;
+}
+
+function adminIslem(t, islem) {
+  if (!isAdmin()) return;
+  const etiket = {uyar: "Uyar", askiya: "Askıya al", sil: "Hesabı sil", kapat: "Raporu kapat"}[islem];
+  modalAc(`
+    <div class="h-full bg-black/80 flex items-center justify-center p-6 giris">
+      <div class="w-full max-w-xs bg-[#0d0818] rounded-2xl p-5 border border-white/10 space-y-3">
+        <h3 class="font-black text-lg">${etiket}</h3>
+        <p class="text-xs text-slate-400">Bu işlem denetim kaydına yazılır. Gerekçe zorunlu (en az 10 karakter).</p>
+        <textarea id="adminGerekce" rows="3" maxlength="300" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none"></textarea>
+        <p id="adminMesaj" class="text-xs text-rose-400 min-h-[16px]"></p>
+        <button data-act="adminOnay" data-t="${t}" data-islem="${islem}" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">${etiket}</button>
+        <button data-act="modalKapat" class="w-full py-2 text-xs text-slate-400">Vazgeç</button>
+      </div>
+    </div>`);
+}
+
+function adminOnay(t, islem) {
+  if (!isAdmin()) return;
+  const gerekce = (($("#adminGerekce") || {}).value || "").trim();
+  if (gerekce.length < 10) {
+    const m = $("#adminMesaj");
+    if (m) m.textContent = cevir("Gerekçe en az 10 karakter olmalı.");
+    return;
+  }
+  const raporlar = okuListe("vm_sikayet");
+  const rapor = raporlar.find(r => String(r.t) === String(t));
+  if (!rapor) return;
+  const hedef = rapor.hedefEposta;
+  if (islem === "kapat") {
+    rapor.kapali = true;
+  } else if (!hedef) {
+    toast("Bu şikayetin bağlı bir hesabı yok (örnek profil).");
+    return;
+  } else if (islem === "uyar") {
+    const b = bildirimListesi();
+    (b[hedef] = b[hedef] || []).push({t: Date.now(), metin: "Yönetici uyarısı: " + gerekce});
+    kaydetObjeler("vm_bildirim", b);
+  } else if (islem === "askiya") {
+    const a = askidaListesi();
+    a[hedef] = {gerekce, t: Date.now()};
+    kaydetObjeler("vm_askida", a);
+    rapor.kapali = true;
+  } else if (islem === "sil") {
+    const h = hesaplar();
+    delete h[hedef];
+    hesapKaydet(h);
+    const y = okuObje("vm_yaslar");
+    delete y[hedef];
+    kaydetObjeler("vm_yaslar", y);
+    rapor.kapali = true;
+  }
+  kaydetListe("vm_sikayet", raporlar);
+  denetimEkle({t: Date.now(), admin: st.oturum, islem, hedef: hedef || rapor.hedef, gerekce});
+  modalKapat();
+  toast("İşlem kaydedildi ✅");
+  render();
+}
+
+function okuObje(anahtar) {
+  try { return JSON.parse(localStorage.getItem(anahtar) || "{}"); } catch (err) { return {}; }
+}
+
+function bildirimlerHTML() {
+  const liste = (bildirimListesi()[st.oturum] || []).slice(-10).reverse();
+  if (!liste.length) return `<p class="text-xs text-slate-500">Bildirim yok.</p>`;
+  return liste.map(b => `<div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-xs">${esc(b.metin)}<div class="text-[10px] text-slate-500 mt-1">${tarih(b.t)}</div></div>`).join("");
+}
+
+/* ---------- Dil desteği: Türkçe, English, Русский, 中文 ---------- */
+const DILLER = {tr: "Türkçe", en: "English", ru: "Русский", zh: "中文"};
+const CEVIRI = {
+  tr: {
+    nav_kesfet: "Keşfet", nav_akis: "Akış", nav_liderlik: "Liderlik", nav_mesaj: "Mesaj", nav_profil: "Profil",
+    giris_baslik: "VibeMatch'e hoş geldin", giris_alt: "Eskişehir'de aynı kafadaki insanlarla tanış.",
+    giris_sekme: "Giriş yap", kayit_sekme: "Kayıt ol", eposta: "E-posta adresin", sifre: "Şifre (en az 6 karakter)",
+    sifre_tekrar: "Şifre (tekrar)", dogum: "Doğum tarihin (18 yaş ve üzeri)", gonder_giris: "Giriş yap", gonder_kayit: "Kayıt ol",
+    dil_baslik: "Dil", kesfet_ipucu: "Kartı sağa kaydır: beğen · sola kaydır: geç", eskisehir_once: "Eskişehir öncelikli ✨"
+  },
+  en: {
+    nav_kesfet: "Discover", nav_akis: "Feed", nav_liderlik: "Ranking", nav_mesaj: "Messages", nav_profil: "Profile",
+    giris_baslik: "Welcome to VibeMatch", giris_alt: "Meet people who share your vibe in Eskişehir.",
+    giris_sekme: "Log in", kayit_sekme: "Sign up", eposta: "Your email", sifre: "Password (at least 6 characters)",
+    sifre_tekrar: "Password (repeat)", dogum: "Date of birth (18+)", gonder_giris: "Log in", gonder_kayit: "Sign up",
+    dil_baslik: "Language", kesfet_ipucu: "Swipe right: like · swipe left: pass", eskisehir_once: "Eskişehir first ✨"
+  },
+  ru: {
+    nav_kesfet: "Поиск", nav_akis: "Лента", nav_liderlik: "Рейтинг", nav_mesaj: "Чаты", nav_profil: "Профиль",
+    giris_baslik: "Добро пожаловать в VibeMatch", giris_alt: "Знакомства с людьми твоей волны в Эскишехире.",
+    giris_sekme: "Войти", kayit_sekme: "Регистрация", eposta: "Твой e-mail", sifre: "Пароль (минимум 6 символов)",
+    sifre_tekrar: "Пароль (повтор)", dogum: "Дата рождения (18+)", gonder_giris: "Войти", gonder_kayit: "Зарегистрироваться",
+    dil_baslik: "Язык", kesfet_ipucu: "Свайп вправо: нравится · влево: пропустить", eskisehir_once: "Сначала Эскишехир ✨"
+  },
+  zh: {
+    nav_kesfet: "发现", nav_akis: "动态", nav_liderlik: "排行榜", nav_mesaj: "消息", nav_profil: "我的",
+    giris_baslik: "欢迎来到 VibeMatch", giris_alt: "在埃斯基谢希尔结识志同道合的朋友。",
+    giris_sekme: "登录", kayit_sekme: "注册", eposta: "你的邮箱", sifre: "密码（至少6位）",
+    sifre_tekrar: "确认密码", dogum: "出生日期（18岁以上）", gonder_giris: "登录", gonder_kayit: "注册",
+    dil_baslik: "语言", kesfet_ipucu: "右滑：喜欢 · 左滑：跳过", eskisehir_once: "优先埃斯基谢希尔 ✨"
+  }
+};
+
+function t(anahtar) {
+  const d = st.dil || "tr";
+  return (CEVIRI[d] && CEVIRI[d][anahtar]) || CEVIRI.tr[anahtar] || anahtar;
+}
+
+function uygulaDil() {
+  document.documentElement.lang = st.dil || "tr";
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+}
+
+function dilDegistir(d) {
+  st.dil = CEVIRI[d] ? d : "tr";
+  try { localStorage.setItem("vm_dil", st.dil); } catch (err) {}
+  render();
+}
+
+function dilHTML() {
+  return `
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2" data-i18n="dil_baslik">${t("dil_baslik")}</h3>
+      <div class="grid grid-cols-2 gap-2">
+        ${Object.keys(DILLER).map(k => `<button data-act="dil" data-d="${k}" class="cip py-2.5 ${st.dil === k ? "secili" : ""}">${DILLER[k]}</button>`).join("")}
+      </div>
+    </section>`;
+}
+
+/* ---------- Tam çeviri sözlüğü: [Türkçe, English, Русский, 中文] ---------- */
+const SOZLUK_SATIRLARI = [
+  ["Keşfet", "Discover", "Поиск", "发现"],
+  ["Akış", "Feed", "Лента", "动态"],
+  ["Liderlik", "Ranking", "Рейтинг", "排行榜"],
+  ["Mesaj", "Messages", "Чаты", "消息"],
+  ["Profil", "Profile", "Профиль", "我的"],
+  ["Ayarlar", "Settings", "Настройки", "设置"],
+  ["Eskişehir öncelikli ✨", "Eskişehir first ✨", "Сначала Эскишехир ✨", "优先埃斯基谢希尔 ✨"],
+  ["Şimdilik bu kadar", "That's all for now", "На сегодня всё", "今天就到这里"],
+  ["Yeni profiller için biraz sonra tekrar bak.", "Check back later for new profiles.", "Загляни позже за новыми анкетами.", "稍后再来看看新的资料吧。"],
+  ["Keşfi yenile", "Refresh discover", "Обновить поиск", "刷新发现"],
+  ["BEĞEN", "LIKE", "НРАВИТСЯ", "喜欢"],
+  ["GEÇ", "PASS", "ПРОПУСТИТЬ", "跳过"],
+  ["Kartı sağa kaydır: beğen · sola kaydır: geç", "Swipe right: like · swipe left: pass", "Свайп вправо: нравится · влево: пропустить", "右滑：喜欢 · 左滑：跳过"],
+  ["🚩 Şikayet et", "🚩 Report", "🚩 Пожаловаться", "🚩 举报"],
+  ["🚫 Engelle", "🚫 Block", "🚫 Заблокировать", "🚫 屏蔽"],
+  ["Şikayet et", "Report", "Пожаловаться", "举报"],
+  ["Engelle", "Block", "Заблокировать", "屏蔽"],
+  ["🚩 Bildir", "🚩 Report", "🚩 Пожаловаться", "🚩 举报"],
+  ["Gönder", "Send", "Отправить", "发送"],
+  ["Paylaş", "Share", "Поделиться", "分享"],
+  ["Fotoğraf", "Photo", "Фото", "照片"],
+  ["📷 Fotoğraf", "📷 Photo", "📷 Фото", "📷 照片"],
+  ["Fotoğraf seçildi ✓", "Photo selected ✓", "Фото выбрано ✓", "已选择照片 ✓"],
+  ["📷 Fotoğraf seçildi ✓", "📷 Photo selected ✓", "📷 Фото выбрано ✓", "📷 已选择照片 ✓"],
+  ["Beğeni aldıkça puan", "Earn points as likes come in", "Очки за лайки", "获赞即得积分"],
+  ["Beğeni aldıkça puan kazanırsın", "You earn points as you get likes", "Получай очки за лайки", "获赞即可赚取积分"],
+  ["Henüz yorum yok, ilk yorumu sen yaz!", "No comments yet. Be the first!", "Комментариев пока нет, напиши первым!", "还没有评论，快来抢沙发！"],
+  ["Yorum yaz…", "Write a comment…", "Напиши комментарий…", "写评论…"],
+  ["Henüz gönderin yok. Akış sekmesinden paylaşabilirsin.", "You have no posts yet. Share one from the Feed tab.", "Публикаций пока нет. Поделись во вкладке «Лента».", "还没有动态，去动态页分享一下吧。"],
+  ["Eskişehir'in En Popülerleri", "Most popular in Eskişehir", "Самые популярные в Эскишехире", "埃斯基谢希尔最受欢迎"],
+  ["Hikaye ve gönderilerin beğeni aldıkça puan kazan, ilk 10'a gir.", "Earn points as your stories and posts get likes. Make the top 10!", "Получай очки за лайки к историям и постам — попади в топ-10!", "故事和动态获赞即可积分，冲进前十！"],
+  ["❤️ Her gönderi beğenisi: +10 puan", "❤️ Each post like: +10 points", "❤️ Каждый лайк к посту: +10 очков", "❤️ 每个动态点赞：+10 分"],
+  ["📸 Her hikaye paylaşımı: +15 puan", "📸 Each story shared: +15 points", "📸 Каждая история: +15 очков", "📸 每次分享故事：+15 分"],
+  ["💞 Her eşleşme: +5 puan", "💞 Each match: +5 points", "💞 Каждый мэтч: +5 очков", "💞 每次配对：+5 分"],
+  ["İletildi ✓", "Sent ✓", "Отправлено ✓", "已发送 ✓"],
+  ["Bir mesaj yaz…", "Write a message…", "Напиши сообщение…", "输入消息…"],
+  ["Eşleşmeler", "Matches", "Совпадения", "配对"],
+  ["Mesajlar", "Messages", "Сообщения", "消息"],
+  ["Henüz eşleşmen yok. Keşfet sekmesinde kaydır! 💗", "No matches yet. Swipe in Discover! 💗", "Совпадений пока нет. Листай в поиске! 💗", "还没有配对，去发现页滑动吧！💗"],
+  ["Gönderilerin", "Your posts", "Твои публикации", "你的动态"],
+  ["Ruh halin", "Your mood", "Твоё настроение", "你的心情"],
+  ["Notun (24 saat görünür)", "Your note (visible for 24 hours)", "Твоя заметка (видна 24 часа)", "你的便签（24小时可见）"],
+  ["Şu an dinlediğin", "Now playing", "Сейчас слушаешь", "正在播放"],
+  ["📷 Galeriden fotoğraf seç", "📷 Choose a photo from gallery", "📷 Выбрать фото из галереи", "📷 从相册选择照片"],
+  ["puan", "points", "очков", "积分"],
+  ["eşleşme", "matches", "совпадений", "配对"],
+  ["beğeni", "likes", "лайков", "点赞"],
+  ["🌙 Koyu", "🌙 Dark", "🌙 Тёмная", "🌙 深色"],
+  ["☀️ Açık", "☀️ Light", "☀️ Светлая", "☀️ 浅色"],
+  ["Ne düşünüyorsun? (60 karakter)", "What's on your mind? (60 characters)", "О чём думаешь? (60 символов)", "你在想什么？（60字以内）"],
+  ["Mesaj Gönder", "Send message", "Написать", "发消息"],
+  ["Keşfetmeye devam", "Keep discovering", "Продолжить поиск", "继续发现"],
+  ["Eşleştiniz!", "It's a match!", "Это совпадение!", "配对成功！"],
+  ["Vazgeç", "Cancel", "Отмена", "取消"],
+  ["Sahte profil", "Fake profile", "Фейковый профиль", "虚假资料"],
+  ["Uygunsuz fotoğraf", "Inappropriate photo", "Неподходящее фото", "不当照片"],
+  ["Taciz veya tehdit", "Harassment or threats", "Травля или угрозы", "骚扰或威胁"],
+  ["Dolandırıcılık veya reklam", "Scam or advertising", "Мошенничество или реклама", "诈骗或广告"],
+  ["Yaşının 18'den küçük olduğu şüphesi", "Suspected to be under 18", "Подозрение, что младше 18 лет", "疑似未满18岁"],
+  ["Diğer", "Other", "Другое", "其他"],
+  ["Engellediğin kişi seni göremez, sana mesaj atamaz ve sen de onu görmezsin. Ayarlar'dan engeli kaldırabilirsin.", "They won't see you or message you, and you won't see them. You can unblock them in Settings.", "Он не увидит тебя и не сможет писать, и ты его тоже не увидишь. Разблокировать можно в настройках.", "对方将无法看到你或给你发消息，你也看不到对方。可在设置中解除屏蔽。"],
+  ["Engellenenler", "Blocked users", "Заблокированные", "已屏蔽的用户"],
+  ["Engellediğin kimse yok.", "You haven't blocked anyone.", "Ты никого не заблокировал.", "你还没有屏蔽任何人。"],
+  ["Engeli kaldır", "Unblock", "Разблокировать", "解除屏蔽"],
+  ["Fotoğraf kuralları", "Photo rules", "Правила фото", "照片规则"],
+  ["Sadece kendi gerçek fotoğrafını yükle.", "Only upload a real photo of yourself.", "Загружай только настоящее фото себя.", "只上传你本人的真实照片。"],
+  ["Yüzün net ve tek kişi olarak görünmeli.", "Your face must be clear and you must be the only person.", "Лицо должно быть чётким, на фото только ты.", "脸部需清晰可见，且仅本人出镜。"],
+  ["Başkasının, ünlü veya internetten alınmış fotoğrafları yasak.", "Photos of others, celebrities or photos taken from the internet are not allowed.", "Чужие фото, фото знаменитостей или из интернета запрещены.", "禁止使用他人、名人或网络上的照片。"],
+  ["Filtre ağırlıklı, karikatür, grup veya çıplaklık ya da şiddet içeren fotoğraflar yasak.", "Heavily filtered, cartoon, group photos, or nudity/violence are not allowed.", "Запрещены фото с сильными фильтрами, рисунки, групповые фото, а также с обнажённостью или насилием.", "禁止重度滤镜、卡通、合照，以及含裸露或暴力内容的照片。"],
+  ["Kuralları okudum, bu fotoğraf bana ait ve gerçek.", "I've read the rules. This photo is mine and real.", "Я прочитал правила. Это моё настоящее фото.", "我已阅读规则，这张照片是本人真实照片。"],
+  ["Fotoğraf seç", "Choose photo", "Выбрать фото", "选择照片"],
+  ["Yönetici paneli", "Admin panel", "Панель администратора", "管理面板"],
+  ["🛡️ Yönetici paneli", "🛡️ Admin panel", "🛡️ Панель администратора", "🛡️ 管理面板"],
+  ["Bu sayfaya erişim yetkin yok.", "You don't have access to this page.", "У тебя нет доступа к этой странице.", "你没有访问此页面的权限。"],
+  ["hesap bağlı değil (örnek profil)", "no linked account (sample profile)", "аккаунт не привязан (пример профиля)", "未关联账号（示例资料）"],
+  ["Kapatıldı", "Closed", "Закрыто", "已关闭"],
+  ["Uyar", "Warn", "Предупредить", "警告"],
+  ["Askıya al", "Suspend", "Приостановить", "暂停"],
+  ["Hesabı sil", "Delete account", "Удалить аккаунт", "删除账号"],
+  ["Kapat", "Close", "Закрыть", "关闭"],
+  ["Raporu kapat", "Close report", "Закрыть жалобу", "关闭举报"],
+  ["Denetim kaydı (son 20)", "Audit log (last 20)", "Журнал действий (последние 20)", "审计日志（最近20条）"],
+  ["Şikayet yok.", "No reports.", "Жалоб нет.", "没有举报。"],
+  ["Kayıt yok.", "No records.", "Записей нет.", "没有记录。"],
+  ["Gerekçe en az 10 karakter olmalı.", "The reason must be at least 10 characters.", "Причина должна быть не короче 10 символов.", "理由至少需要10个字符。"],
+  ["Bu işlem denetim kaydına yazılır. Gerekçe zorunlu (en az 10 karakter).", "This action is logged. A reason is required (at least 10 characters).", "Действие записывается в журнал. Причина обязательна (минимум 10 символов).", "此操作将被记录。必须填写理由（至少10个字符）。"],
+  ["Bu şikayetin bağlı bir hesabı yok (örnek profil).", "This report has no linked account (sample profile).", "К этой жалобе не привязан аккаунт (пример профиля).", "该举报未关联账号（示例资料）。"],
+  ["İşlem kaydedildi ✅", "Action saved ✅", "Действие сохранено ✅", "操作已保存 ✅"],
+  ["Hoş geldin! 👋", "Welcome! 👋", "Добро пожаловать! 👋", "欢迎！👋"],
+  ["Çıkış yapıldı", "Logged out", "Вы вышли", "已退出登录"],
+  ["Geçerli bir e-posta adresi gir.", "Enter a valid email address.", "Введите корректный e-mail.", "请输入有效的邮箱地址。"],
+  ["Şifre en az 6 karakter olmalı.", "Password must be at least 6 characters.", "Пароль должен содержать не менее 6 символов.", "密码至少需要6个字符。"],
+  ["Şifreler eşleşmiyor.", "Passwords don't match.", "Пароли не совпадают.", "两次密码不一致。"],
+  ["Doğum tarihini gir.", "Enter your date of birth.", "Укажите дату рождения.", "请输入出生日期。"],
+  ["Bu uygulama yalnızca 18 yaş ve üzeri kullanıcılar içindir.", "This app is only for users aged 18 and over.", "Приложение только для пользователей от 18 лет.", "本应用仅面向18岁及以上用户。"],
+  ["Bu e-posta ile zaten kayıt var. Giriş yap sekmesini kullan.", "This email is already registered. Use the Log in tab.", "Этот e-mail уже зарегистрирован. Используйте вкладку «Войти».", "该邮箱已注册，请使用“登录”。"],
+  ["Kayıt yapılamadı (tarayıcı depolaması kapalı).", "Sign-up failed (browser storage is disabled).", "Не удалось зарегистрироваться (хранилище браузера отключено).", "注册失败（浏览器存储已禁用）。"],
+  ["Bu e-posta ile kayıt bulunamadı.", "No account found with this email.", "Аккаунт с этим e-mail не найден.", "未找到该邮箱的账号。"],
+  ["Şifre yanlış.", "Wrong password.", "Неверный пароль.", "密码错误。"],
+  ["Yeni şifre en az 6 karakter olmalı.", "New password must be at least 6 characters.", "Новый пароль должен содержать не менее 6 символов.", "新密码至少需要6个字符。"],
+  ["Yeni şifreler eşleşmiyor.", "New passwords don't match.", "Новые пароли не совпадают.", "两次新密码不一致。"],
+  ["Mevcut şifre yanlış.", "Current password is wrong.", "Текущий пароль неверный.", "当前密码错误。"],
+  ["Şifre kaydedilemedi (tarayıcı depolaması kapalı).", "Password could not be saved (browser storage is disabled).", "Не удалось сохранить пароль (хранилище отключено).", "无法保存密码（浏览器存储已禁用）。"],
+  ["Şifren değiştirildi ✅", "Password changed ✅", "Пароль изменён ✅", "密码已修改 ✅"],
+  ["Önce kuralları onaylamalısın", "You must accept the rules first", "Сначала подтверди правила", "请先确认规则"],
+  ["Şikayetin alındı, inceleyeceğiz 🙏", "Report received, we'll review it 🙏", "Жалоба получена, мы рассмотрим её 🙏", "已收到举报，我们会处理 🙏"],
+  ["Engellendi 🚫", "Blocked 🚫", "Заблокирован 🚫", "已屏蔽 🚫"],
+  ["Engel kaldırıldı", "Unblocked", "Блокировка снята", "已解除屏蔽"],
+  ["Fotoğraf gönderildi 📷", "Photo sent 📷", "Фото отправлено 📷", "照片已发送 📷"],
+  ["Hikayen yayında! +15 puan 🎉", "Your story is live! +15 points 🎉", "История опубликована! +15 очков 🎉", "故事已发布！+15 分 🎉"],
+  ["Fotoğraf eklendi 📷", "Photo added 📷", "Фото добавлено 📷", "已添加照片 📷"],
+  ["Profil fotoğrafın güncellendi 📸", "Profile photo updated 📸", "Фото профиля обновлено 📸", "头像已更新 📸"],
+  ["Önce bir şey yaz ✍️", "Write something first ✍️", "Сначала напиши что-нибудь ✍️", "先写点什么吧 ✍️"],
+  ["Paylaşıldı! Beğeniler puanına eklenecek ✨", "Shared! Likes will add to your points ✨", "Опубликовано! Лайки добавятся к очкам ✨", "已分享！点赞将计入积分 ✨"],
+  ["Bir not yaz 📝", "Write a note 📝", "Напиши заметку 📝", "写点便签吧 📝"],
+  ["Notun 24 saat görünecek 💬", "Your note will be visible for 24 hours 💬", "Твоя заметка будет видна 24 часа 💬", "你的便签将显示24小时 💬"],
+  ["💗 Bir gönderin beğenildi! +10 puan", "💗 Someone liked your post! +10 points", "💗 Кто-то лайкнул твой пост! +10 очков", "💗 有人点赞了你的动态！+10 分"],
+  ["Selam! Sen de bu gece kahve modunda mısın? ☕", "Hi! Are you in coffee mode tonight too? ☕", "Привет! Ты тоже сегодня в кофейном настроении? ☕", "嗨！你今晚也是咖啡模式吗？☕"],
+  ["Hikayen 24 saat görünür ✨", "Your story is visible for 24 hours ✨", "История видна 24 часа ✨", "故事将显示24小时 ✨"],
+  ["Hikayen", "Your story", "Твоя история", "你的故事"],
+  ["Sen", "You", "Ты", "你"],
+  ["(sen)", "(you)", "(ты)", "(你)"],
+  ["Üniversite öğrencisi", "University student", "Студент", "大学生"],
+  ["Kahve, kitap ve gece yürüyüşü ☕", "Coffee, books and night walks ☕", "Кофе, книги и ночные прогулки ☕", "咖啡、书和夜间散步 ☕"],
+  ["Psikoloji · 2. sınıf", "Psychology · 2nd year", "Психология · 2 курс", "心理学 · 大二"],
+  ["Mühendislik · 4. sınıf", "Engineering · 4th year", "Инженерия · 4 курс", "工程 · 大四"],
+  ["Mimarlık · 3. sınıf", "Architecture · 3rd year", "Архитектура · 3 курс", "建筑学 · 大三"],
+  ["Yazılım · Mezun", "Software · Graduate", "Программирование · выпускник", "软件 · 毕业生"],
+  ["Turizm · 2. sınıf", "Tourism · 2nd year", "Туризм · 2 курс", "旅游管理 · 大二"],
+  ["Tıp · 5. sınıf", "Medicine · 5th year", "Медицина · 5 курс", "医学 · 大五"],
+  ["İletişim · 3. sınıf", "Communication · 3rd year", "Коммуникации · 3 курс", "传播学 · 大三"],
+  ["Hukuk · 4. sınıf", "Law · 4th year", "Право · 4 курс", "法学 · 大四"],
+  ["Sabah kahvesi, eski kitapçılar, Porsuk kenarı 🚲", "Morning coffee, old bookshops, along the Porsuk 🚲", "Утренний кофе, старые книжные, набережная Порсука 🚲", "早晨咖啡、旧书店、波尔苏克河畔 🚲"],
+  ["Halı saha, sahil sabahları, kötü espri ⚽", "Five-a-side football, seaside mornings, bad jokes ⚽", "Мини-футбол, утра у моря, плохие шутки ⚽", "五人制足球、海边清晨、冷笑话 ⚽"],
+  ["Çizim defteri her zaman çantada ✏️", "A sketchbook always in my bag ✏️", "Альбом для эскизов всегда в сумке ✏️", "速写本总在包里 ✏️"],
+  ["Kod, kahve, sonra yine kod.", "Code, coffee, then more code.", "Код, кофе, потом снова код.", "写代码、喝咖啡，然后继续写代码。"],
+  ["Seyahat planı yapıyorum, Sazova hep bekler 🧺", "Planning a trip, Sazova always waits 🧺", "Планирую поездку, Сазова всегда ждёт 🧺", "在规划旅行，萨佐瓦总在等我 🧺"],
+  ["Nöbet arası kısa molalar ☕", "Short breaks between shifts ☕", "Короткие перерывы между дежурствами ☕", "值班间隙的短暂休息 ☕"],
+  ["Podcast önerisi bekliyorum 🎙️", "Looking for podcast recommendations 🎙️", "Жду совет по подкастам 🎙️", "求播客推荐 🎙️"],
+  ["Vapurda müzik, Kadıköy'de kahve.", "Music on the ferry, coffee in Kadıköy.", "Музыка на пароме, кофе в Кадыкёе.", "渡轮上的音乐，卡德柯伊的咖啡。"],
+  ["Kütüphanedeyim, gelen var mı?", "I'm at the library, anyone coming?", "Я в библиотеке, кто подойдёт?", "我在图书馆，有人来吗？"],
+  ["Mod: Müzik 🎧", "Mood: Music 🎧", "Настроение: музыка 🎧", "心情：音乐 🎧"],
+  ["Maket yetişmiyor 😵", "Model deadline is tight 😵", "Макет не успеваю 😵", "模型赶不及了 😵"],
+  ["Lobi açtım, gel 🎮", "Opened a lobby, join 🎮", "Открыл лобби, заходи 🎮", "开了个房间，快来 🎮"],
+  ["Gece yürüyüşü? 🌙", "Night walk? 🌙", "Ночная прогулка? 🌙", "夜间散步？🌙"],
+  ["Uyanığım, kim var? ", "I'm awake, who's around?", "Не сплю, кто на связи?", "我还醒着，谁在？"],
+  ["Yeni podcast önerin var mı?", "Got any new podcast suggestions?", "Есть новые советы по подкастам?", "有什么新播客推荐吗？"],
+  ["Vapurdayım 🚢", "On the ferry 🚢", "Я на пароме 🚢", "我在渡轮上 🚢"],
+  ["Porsuk kenarı, sabah kahvesi ☕", "Along the Porsuk, morning coffee ☕", "Набережная Порсука, утренний кофе ☕", "波尔苏克河畔，早晨咖啡 ☕"],
+  ["Halı saha perşembe 😎", "Football on Thursday 😎", "Футбол в четверг 😎", "周四踢球 😎"],
+  ["Maket bitti, şimdi uyku 🛌", "Model finished, now sleep 🛌", "Макет готов, теперь спать 🛌", "模型做完了，该睡觉了 🛌"],
+  ["Yeni podcast bölümü çıktı 🎙️", "New podcast episode is out 🎙️", "Вышел новый выпуск подкаста 🎙️", "新播客上线了 🎙️"],
+  ["Vapurda gün batımı… Eskişehir bugün başka güzel 🌅", "Sunset on the ferry… Eskişehir looks extra nice today 🌅", "Закат на пароме… Эскишехир сегодня особенно красив 🌅", "渡轮上的日落……今天的埃斯基谢希尔格外美 🌅"],
+  ["Kütüphane sınavı bitti! Kim kahve ister? ☕", "Library exams are over! Who wants coffee? ☕", "Экзамены в библиотеке позади! Кто хочет кофе? ☕", "图书馆考试结束啦！谁要喝咖啡？☕"],
+  ["Hafta sonu Sazova'da piknik? 🧺", "Picnic at Sazova this weekend? 🧺", "Пикник в Сазове на выходных? 🧺", "周末去萨佐瓦野餐？🧺"],
+  ["Bu akşamın playlist'i hazır 🎧", "Tonight's playlist is ready 🎧", "Плейлист на вечер готов 🎧", "今晚的歌单准备好了 🎧"],
+  ["Selam! Eşleştik 😄", "Hi! We matched 😄", "Привет! Мы совпали 😄", "嗨！我们配对成功啦 😄"],
+  ["Merhaba! Porsuk kenarında mı takılıyorsun?", "Hi! Are you hanging out along the Porsuk?", "Привет! Ты гуляешь у Порсука?", "嗨！你在波尔苏克河边逛吗？"],
+  ["Evet, bu akşam kahve molası ☕🚲", "Yes, a coffee break tonight ☕🚲", "Да, сегодня вечером кофе-перерыв ☕🚲", "是的，今晚喝杯咖啡休息一下 ☕🚲"],
+  ["Bu hafta halı saha var mı?", "Is there football this week?", "На этой неделе будет мини-футбол?", "这周有足球吗？"],
+  ["Perşembe olabilir ⚽", "Thursday works ⚽", "Может, в четверг ⚽", "周四可以 ⚽"],
+  ["Harika fotoğraf!", "Great photo!", "Отличное фото!", "照片很棒！"],
+  ["Ben de geliyorum ☕", "I'm coming too ☕", "Я тоже иду ☕", "我也去 ☕"],
+  ["Haha kesin 😂", "Haha, definitely 😂", "Ха-ха, точно 😂", "哈哈，一定 😂"],
+  ["Sen de bir kahve ister misin?", "Would you like a coffee too?", "Хочешь тоже кофе?", "要不要也来杯咖啡？"],
+  ["Bu hafta sonu sinema var mı?", "Any movies this weekend?", "На выходных будет кино?", "周末有电影吗？"],
+  ["Bence bu müzik tam sana göre 🎧", "I think this music is perfect for you 🎧", "По-моему, эта музыка тебе подойдёт 🎧", "我觉得这首音乐很适合你 🎧"],
+  ["Tamam, akşam buluşuruz 🌙", "Okay, see you tonight 🌙", "Ок, увидимся вечером 🌙", "好，晚上见 🌙"],
+  ["Porsuk kenarı", "Porsuk riverside", "Набережная Порсука", "波尔苏克河畔"],
+  ["Gece Yolu", "Night Road", "Ночная дорога", "夜路"],
+  ["Porsuk Akşamı", "Porsuk Evening", "Вечер на Порсуке", "波尔苏克之夜"],
+  ["Kahve Molası", "Coffee Break", "Кофейный перерыв", "咖啡时光"],
+  ["Sabaha Kadar", "Until Morning", "До утра", "直到天亮"],
+  ["Örnek Sanatçı", "Sample Artist", "Пример исполнителя", "示例歌手"],
+  ["Demo Band", "Demo Band", "Demo Band", "Demo Band"],
+  ["Lo-fi Lab", "Lo-fi Lab", "Lo-fi Lab", "Lo-fi Lab"],
+  ["Gece Kulübü", "Night Club", "Ночной клуб", "夜店"],
+  ["🎧 Müzik modu", "🎧 Music mode", "🎧 Режим музыки", "🎧 音乐模式"],
+  ["🌙 Gece modu", "🌙 Night mode", "🌙 Ночной режим", "🌙 夜间模式"],
+  ["☕ Sakin", "☕ Chill", "☕ Спокойно", "☕ 安静"],
+  ["🔥 Enerjik", "🔥 Energetic", "🔥 Энергично", "🔥 活力"],
+  ["🎮 Oyun modu", "🎮 Gaming mode", "🎮 Игровой режим", "🎮 游戏模式"],
+  ["📚 Ders modu", "📚 Study mode", "📚 Учебный режим", "📚 学习模式"],
+  ["Kitap", "Books", "Книги", "书"],
+  ["Kahve", "Coffee", "Кофе", "咖啡"],
+  ["Bisiklet", "Cycling", "Велосипед", "骑行"],
+  ["Müzik", "Music", "Музыка", "音乐"],
+  ["Spor", "Sports", "Спорт", "运动"],
+  ["Sinema", "Movies", "Кино", "电影"],
+  ["Sanat", "Art", "Искусство", "艺术"],
+  ["Oyun", "Gaming", "Игры", "游戏"],
+  ["Teknoloji", "Technology", "Технологии", "科技"],
+  ["Seyahat", "Travel", "Путешествия", "旅行"],
+  ["Fotoğrafçılık", "Photography", "Фотография", "摄影"],
+  ["Fotoğraf", "Photography", "Фото", "摄影"],
+  ["Eskişehir", "Eskişehir", "Эскишехир", "埃斯基谢希尔"],
+  ["İzmir", "İzmir", "Измир", "伊兹密尔"],
+  ["Ankara", "Ankara", "Анкара", "安卡拉"],
+  ["İstanbul", "Istanbul", "Стамбул", "伊斯坦布尔"],
+  ["BEĞEN", "LIKE", "НРАВИТСЯ", "喜欢"],
+  ["Kullanım", "Usage", "Использование", "用量"],
+  ["Hesap", "Account", "Аккаунт", "账号"],
+  ["Hesap bilgileri", "Account details", "Данные аккаунта", "账号信息"],
+  ["Çıkış yap", "Log out", "Выйти", "退出登录"],
+  ["Tema", "Theme", "Тема", "主题"],
+  ["Bildirimler", "Notifications", "Уведомления", "通知"],
+  ["Bildirim yok.", "No notifications.", "Уведомлений нет.", "没有通知。"],
+  ["Şifre değiştir", "Change password", "Сменить пароль", "修改密码"],
+  ["Mevcut şifre", "Current password", "Текущий пароль", "当前密码"],
+  ["Yeni şifre (en az 6 karakter)", "New password (at least 6 characters)", "Новый пароль (минимум 6 символов)", "新密码（至少6个字符）"],
+  ["Yeni şifre (tekrar)", "New password (repeat)", "Новый пароль (повтор)", "新密码（确认）"],
+  ["Şifreyi değiştir", "Change password", "Сменить пароль", "修改密码"],
+  ["Dil", "Language", "Язык", "语言"],
+  ["Şimdilik", "For now", "Пока что", "暂时"],
+  ["Giriş yap", "Log in", "Войти", "登录"],
+  ["Kayıt ol", "Sign up", "Зарегистрироваться", "注册"],
+  ["VibeMatch'e hoş geldin", "Welcome to VibeMatch", "Добро пожаловать в VibeMatch", "欢迎来到 VibeMatch"],
+  ["Eskişehir'de aynı kafadaki insanlarla tanış.", "Meet people who share your vibe in Eskişehir.", "Знакомься с людьми твоей волны в Эскишехире.", "在埃斯基谢希尔结识志同道合的朋友。"],
+  ["E-posta adresin", "Your email", "Твой e-mail", "你的邮箱"],
+  ["Şifre (en az 6 karakter)", "Password (at least 6 characters)", "Пароль (минимум 6 символов)", "密码（至少6个字符）"],
+  ["Şifre (tekrar)", "Password (repeat)", "Пароль (повтор)", "密码（确认）"],
+  ["Doğum tarihin (18 yaş ve üzeri)", "Date of birth (18+)", "Дата рождения (18+)", "出生日期（18岁以上）"],
+  ["Hesap bu tarayıcıda saklanır. Gerçek e-posta doğrulaması ve cihazlar arası senkron için bir sunucu gerekir.", "Accounts are stored in this browser. Real email verification and cross-device sync need a server.", "Аккаунты хранятся в этом браузере. Для настоящей проверки e-mail и синхронизации между устройствами нужен сервер.", "账号仅保存在此浏览器中。真正的邮箱验证和跨设备同步需要服务器。"],
+  ["Hesabın askıya alındı. Gerekçe: ", "Your account is suspended. Reason: ", "Аккаунт приостановлен. Причина: ", "账号已被暂停。原因："],
+  ["Kayıt ol", "Sign up", "Зарегистрироваться", "注册"],
+  ["Dil", "Language", "Язык", "语言"],
+  ["Koyu", "Dark", "Тёмная", "深色"],
+  ["Açık", "Light", "Светлая", "浅色"],
+  ["Uygulama", "App", "Приложение", "应用"],
+  ["Sekme", "Tab", "Вкладка", "标签页"],
+  ["Gönderi", "Post", "Пост", "动态"],
+  ["Hikaye", "Story", "История", "故事"],
+  ["Yorum", "Comment", "Комментарий", "评论"],
+  ["Beğeni", "Like", "Лайк", "点赞"],
+  ["Şimdi", "Now", "Сейчас", "现在"],
+  ["Çıkış", "Logout", "Выход", "退出"],
+  ["Gizlilik", "Privacy", "Конфиденциальность", "隐私"],
+  ["Güvenlik", "Safety", "Безопасность", "安全"],
+  ["Kullanıcı", "User", "Пользователь", "用户"],
+  ["Admin", "Admin", "Админ", "管理员"],
+  ["Yönetim", "Management", "Управление", "管理"],
+  ["Şikayet", "Report", "Жалоба", "举报"],
+  ["Engel", "Block", "Блокировка", "屏蔽"],
+  ["Askıya", "Suspend", "Приостановка", "暂停"],
+  ["Gerekçe", "Reason", "Причина", "理由"],
+  ["Sil", "Delete", "Удалить", "删除"],
+  ["Kaydet", "Save", "Сохранить", "保存"],
+  ["Tamam", "OK", "ОК", "好"],
+  ["İptal", "Cancel", "Отмена", "取消"],
+  ["Geri", "Back", "Назад", "返回"],
+  ["Hayır", "No", "Нет", "否"],
+  ["Evet", "Yes", "Да", "是"],
+  ["Başlat", "Start", "Старт", "开始"]
+];
+
+/* Dinamik metinler için kalıplar: [regex, en, ru, zh] ($1, $2 yer tutucu) */
+const SOZLUK_KALIPLARI = [
+  [/^(\d+) dk önce$/, "$1 min ago", "$1 мин назад", "$1 分钟前"],
+  [/^(\d+) sa önce$/, "$1 h ago", "$1 ч назад", "$1 小时前"],
+  [/^(\d+) sa (\d+) dk kaldı$/, "$1 h $2 min left", "осталось $1 ч $2 мин", "剩余 $1 小时 $2 分钟"],
+  [/^az önce$/, "just now", "только что", "刚刚"],
+  [/^Görüldü ✓✓ \(Saat: (.+)\)$/, "Seen ✓✓ (Time: $1)", "Прочитано ✓✓ (время: $1)", "已读 ✓✓（时间：$1）"],
+  [/^Sen: (.+)$/, "You: $1", "Вы: $1", "你：$1"],
+  [/^Ruh halin: (.+)$/, "Your mood: $1", "Настроение: $1", "心情：$1"],
+  [/^(.+) için beğenini gönderdin 💗$/, "You liked $1 💗", "Ты лайкнул $1 💗", "你喜欢了 $1 💗"],
+  [/^(.+) ile birbirinizi beğendiniz\.$/, "You and $1 liked each other.", "Вы с $1 понравились друг другу.", "你和 $1 互相喜欢。"],
+  [/^Şikayet kuyruğu \((\d+)\)$/, "Report queue ($1)", "Очередь жалоб ($1)", "举报队列（$1）"],
+  [/^(.+) engellensin mi\?$/, "Block $1?", "Заблокировать $1?", "屏蔽 $1 吗？"],
+  [/^(.+) için bir neden seç\. Şikayetler incelenir\.$/, "Pick a reason for $1. Reports are reviewed.", "Выбери причину для $1. Жалобы рассматриваются.", "选择 $1 的举报理由，举报将被审核。"],
+  [/^Hesabın askıya alındı\. Gerekçe: (.+)$/, "Your account is suspended. Reason: $1", "Аккаунт приостановлен. Причина: $1", "账号已被暂停。原因：$1"],
+  [/^Yönetici uyarısı: (.+)$/, "Admin warning: $1", "Предупреждение администратора: $1", "管理员警告：$1"],
+  [/^📍 (.+) ✓$/, "📍 $1 ✓", "📍 $1 ✓", "📍 $1 ✓"],
+  [/^📷 Fotoğraf seçildi ✓$/, "📷 Photo selected ✓", "📷 Фото выбрано ✓", "📷 已选择照片 ✓"],
+  [/^Sen, (\d+)$/, "You, $1", "Ты, $1", "你，$1"]
+];
+
+/* Çeviri motoru: sözlük ve kalıplarla metni seçilen dile çevirir */
+const DIL_SUTUN = {en: 1, ru: 2, zh: 3};
+function cevir(metin) {
+  const d = (st && st.dil) || "tr";
+  if (d === "tr" || metin === null || metin === undefined) return metin;
+  const ham = String(metin);
+  const duz = ham.trim();
+  if (!duz) return ham;
+  const k = DIL_SUTUN[d];
+  const sat = SOZLUK_SATIRLARI.find(r => r[0] === duz);
+  if (sat) return ham.replace(duz, sat[k]);
+  for (const kal of SOZLUK_KALIPLARI) {
+    if (kal[0].test(duz)) return ham.replace(duz, duz.replace(kal[0], kal[k]));
+  }
+  return ham;
+}
+
+/* Bir kök öğenin içindeki tüm metinleri ve placeholder'ları çevirir */
+function cevirDOM(kok) {
+  if (!kok || (st.dil || "tr") === "tr") return;
+  const w = document.createTreeWalker(kok, NodeFilter.SHOW_TEXT);
+  const dugumler = [];
+  while (w.nextNode()) dugumler.push(w.currentNode);
+  dugumler.forEach(n => { n.nodeValue = cevir(n.nodeValue); });
+  kok.querySelectorAll("[placeholder]").forEach(el => { el.placeholder = cevir(el.placeholder); });
+}
+
+/* Tarih biçimi seçilen dile göre */
+function tarih(zaman) {
+  const yerel = {tr: "tr-TR", en: "en-US", ru: "ru-RU", zh: "zh-CN"}[st.dil || "tr"] || "tr-TR";
+  return new Date(zaman).toLocaleString(yerel);
+}
+
+/* ---------- Çizim ve yardımcı arayüz ---------- */
+function rozetGuncelle() {
+  const toplam = Object.values(st.okunmamis).reduce((a, b) => a + b, 0);
+  const r = $('#rozet');
+  r.textContent = toplam;
+  r.classList.toggle('hidden', !toplam);
+}
+
+function render() {
+  const navEl = document.getElementById('nav');
+  if (navEl) navEl.classList.toggle('hidden', !st.oturum);
+  if (!st.oturum) { document.getElementById('gorunum').innerHTML = girisHTML(); uygulaDil(); cevirDOM(document.getElementById('gorunum')); return; }
+  document.querySelectorAll('.sekme').forEach(b => b.setAttribute('aria-current', String(b.dataset.sekme === st.sekme)));
+  $('#puanRozet').textContent = puanHesapla();
+  rozetGuncelle();
+  const g = $('#gorunum');
+  const gorunumler = {kesfet: kesfetHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
+  g.innerHTML = gorunumler[st.sekme]();
+  uygulaDil();
+  cevirDOM(g);
+  if (st.sekme === 'kesfet') kartBaglan();
+  if (st.sekme === 'mesajlar' && st.sohbetId != null) g.scrollTop = g.scrollHeight;
+}
+
+function toast(m) {
+  const t = $('#toast');
+  t.textContent = cevir(m);
+  t.classList.remove('hidden');
+  clearTimeout(st.toastZ);
+  st.toastZ = setTimeout(() => t.classList.add('hidden'), 2200);
+}
+
+function modalAc(html) {
+  const m = $('#modal');
+  m.innerHTML = html;
+  m.classList.remove('hidden');
+  cevirDOM(m);
+}
+function modalKapat() {
+  const m = $('#modal');
+  m.innerHTML = '';
+  m.classList.add('hidden');
+}
+
+/* ---------- Kaydırma (swipe) ---------- */
+function kartBaglan() {
+  const k = $('#kart');
+  if (!k) return;
+  let x0 = null, dx = 0;
+  const damgalar = () => ({sag: $('#dmg-sag'), sol: $('#dmg-sol')});
+  k.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || st.animasyon) return;
+    x0 = e.clientX;
+    k.setPointerCapture(e.pointerId);
+    k.style.transition = 'none';
+  });
+  k.addEventListener('pointermove', e => {
+    if (x0 === null) return;
+    dx = e.clientX - x0;
+    k.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+    damgalar().sag.style.opacity = Math.max(0, dx / 120);
+    damgalar().sol.style.opacity = Math.max(0, -dx / 120);
+  });
+  const bitir = () => {
+    if (x0 === null) return;
+    x0 = null;
+    if (Math.abs(dx) > 110) {
+      swipe(dx > 0 ? 'sag' : 'sol');
+    } else {
+      k.style.transition = 'transform .3s ease';
+      k.style.transform = '';
+      damgalar().sag.style.opacity = 0;
+      damgalar().sol.style.opacity = 0;
+    }
+    dx = 0;
+  };
+  k.addEventListener('pointerup', bitir);
+  k.addEventListener('pointercancel', bitir);
+}
+
+function swipe(yon) {
+  if (st.animasyon) return;
+  const k = $('#kart');
+  const p = st.deste[st.sira];
+  if (!k || !p) return;
+  st.animasyon = true;
+  k.style.transition = 'transform .35s ease, opacity .35s';
+  k.style.transform = `translateX(${yon === 'sag' ? 700 : -700}px) rotate(${yon === 'sag' ? 30 : -30}deg)`;
+  k.style.opacity = 0;
+  setTimeout(() => {
+    st.sira++;
+    st.kartCalan = false;
+    st.animasyon = false;
+    if (yon === 'sag') eslestirmeDene(p);
+    render();
+  }, 330);
+}
+
+/* Prototip: beğenilerin bir kısmı karşılıklı kabul edilir */
+function eslestirmeDene(p) {
+  if (Math.random() < 0.45) {
+    if (!st.eslesmeler.includes(p.id)) st.eslesmeler.push(p.id);
+    st.sohbetler[p.id] = [{g:'them', t:'Selam! Sen de bu gece kahve modunda mısın? ☕', s:saat()}];
+    eslesmeModal(p);
+  } else {
+    toast(p.ad + ' için beğenini gönderdin 💗');
+  }
+}
+
+function eslesmeModal(p) {
+  modalAc(`
+    <div class="h-full bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 giris">
+      <div class="pop text-center w-full max-w-xs">
+        <div class="flex justify-center items-center -space-x-4 mb-6">
+          <div class="w-20 h-20 rounded-full border-4 border-[#0d0818]" style="background:${BEN.grad}"></div>
+          <div class="w-20 h-20 rounded-full border-4 border-[#0d0818]" style="background:${p.grad}"></div>
+        </div>
+        <h2 class="text-4xl font-black neon">Eşleştiniz!</h2>
+        <p class="text-sm text-slate-300 mt-2">${esc(p.ad)} ile birbirinizi beğendiniz.</p>
+        <button data-act="sohbetAc" data-id="${p.id}" class="mt-6 w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold parla">Mesaj Gönder</button>
+        <button data-act="modalKapat" class="mt-3 w-full py-3 rounded-full border border-white/20 text-slate-200">Keşfetmeye devam</button>
+      </div>
+    </div>`);
+}
+
+/* ---------- Hikayeler ---------- */
+function hikayeAc(h) {
+  modalAc(`
+    <div data-act="hikayeKapat" class="w-full h-full bg-black flex items-center justify-center cursor-pointer">
+      <div class="relative w-full h-full overflow-hidden" style="background:${h.grad}">
+        ${h.foto ? `<img src="${h.foto}" class="absolute inset-0 w-full h-full object-cover">` : ''}
+        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30"></div>
+        <div class="absolute top-3 left-3 right-3 cubuk"><i id="hikayeCubuk"></i></div>
+        <div class="absolute top-6 left-4 flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full" style="background:${h.grad}"></div>
+          <span class="font-semibold">${esc(h.ad)}</span>
+        </div>
+        <p class="absolute bottom-12 left-5 right-5 text-2xl font-bold">${esc(h.metin || '')}</p>
+      </div>
+    </div>`);
+  requestAnimationFrame(() => {
+    const c = $('#hikayeCubuk');
+    if (c) { c.style.transition = 'width 5s linear'; c.style.width = '100%'; }
+  });
+  clearTimeout(st.hikayeZ);
+  st.hikayeZ = setTimeout(hikayeKapat, 5000);
+}
+
+function hikayeKapat() {
+  clearTimeout(st.hikayeZ);
+  modalKapat();
+  render();
+}
+
+$('#hikayeDosya').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    st.benHikayeler.push({foto: r.result, t: Date.now()});
+    st.benHikayeSayi++;
+    toast('Hikayen yayında! +15 puan 🎉');
+    render();
+  };
+  r.readAsDataURL(f);
+  e.target.value = '';
+});
+
+/* ---------- Sohbet ---------- */
+function sohbetAc(id) {
+  st.sohbetId = id;
+  st.sekme = 'mesajlar';
+  st.okunmamis[id] = 0;
+  setTimeout(() => {
+    (st.sohbetler[id] || []).forEach(x => {
+      if (x.g === 'me' && x.d === 'iletildi') { x.d = 'goruldu'; x.gt = saat(); }
+    });
+    if (st.sohbetId == id) render();
+  }, 1000);
+}
+
+function gonder(id) {
+  const inp = $('#mesajGiris');
+  const t = inp ? inp.value.trim() : '';
+  if (!t) return;
+  const m = st.sohbetler[id] || (st.sohbetler[id] = []);
+  const yeni = {g:'me', t: t.slice(0, 200), s: saat(), d:'iletildi'};
+  m.push(yeni);
+  render();
+  const girisAlani = $('#mesajGiris');
+  if (girisAlani) girisAlani.focus();
+  setTimeout(() => {
+    yeni.d = 'goruldu';
+    yeni.gt = saat();
+    if (st.sohbetId == id && st.sekme === 'mesajlar') render();
+  }, 1500);
+  setTimeout(() => {
+    m.push({g:'them', t: CEVAPLAR[Math.floor(Math.random() * CEVAPLAR.length)], s: saat()});
+    if (st.sohbetId == id && st.sekme === 'mesajlar') {
+      render();
+    } else {
+      st.okunmamis[id] = (st.okunmamis[id] || 0) + 1;
+      rozetGuncelle();
+    }
+  }, 2800);
+}
+
+/* Fotoğraf seçimi (gönderi) */
+document.addEventListener('change', e => {
+  if (e.target.id !== 'gonderiDosya') return;
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    st.bekleyenFoto = r.result;
+    const b = document.querySelector('[data-act="fotoSec"]');
+    if (b) b.textContent = cevir('📷 Fotoğraf seçildi ✓');
+    toast('Fotoğraf eklendi 📷');
+  };
+  r.readAsDataURL(f);
+  e.target.value = '';
+});
+
+/* Profil fotoğrafı: galeriden seçilir, 400px kare olarak küçültülüp saklanır */
+document.addEventListener('change', e => {
+  if (e.target.id !== 'profilDosya') return;
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const boyut = 400;
+      const c = document.createElement('canvas');
+      c.width = boyut; c.height = boyut;
+      const k = Math.min(img.width, img.height);
+      const sx = (img.width - k) / 2, sy = (img.height - k) / 2;
+      c.getContext('2d').drawImage(img, sx, sy, k, k, 0, 0, boyut, boyut);
+      st.benFoto = c.toDataURL('image/jpeg', 0.85);
+      try { localStorage.setItem('vm_foto', st.benFoto); } catch (err) {}
+      toast('Profil fotoğrafın güncellendi 📸');
+      render();
+    };
+    img.src = r.result;
+  };
+  r.readAsDataURL(f);
+  e.target.value = '';
+});
+
+/* Tema: koyu veya açık, tarayıcıda hatırlanır */
+function temaUygula() {
+  document.body.classList.toggle("acik", st.tema === "acik");
+  try { localStorage.setItem("vm_tema", st.tema); } catch (err) {}
+}
+
+/* Sohbet fotoğrafı seçimi */
+document.addEventListener('change', e => {
+  if (e.target.id !== 'sohbetDosya') return;
+  const f = e.target.files[0];
+  if (!f) return;
+  resimKucult(f, 800, url => sohbetFotoGonder(st.sohbetId, url));
+  e.target.value = '';
+});
+
+/* ---------- Hesap (Supabase Auth) ---------- */
+/* Bu iki değeri Supabase proje ayarlarından alıp buraya yazın. Anahtar yazılana kadar demo modu çalışır. */
+const SUPABASE_URL = "https://mphmfpusyronkmkjskkl.supabase.co";
+const SUPABASE_ANON = "sb_publishable_Ech22lv1C_Vi70z1k-qdFg_21F6kiJt";
+
+let sb = null;
+try {
+  if (window.supabase && SUPABASE_ANON.indexOf("BURAYA") !== 0) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  }
+} catch (err) { sb = null; }
+
+function girisMesaj(t, hata) {
+  const m = $('#girisMesaj');
+  m.textContent = t;
+  m.className = "text-xs text-center min-h-[1rem] mt-3 " + (hata ? "text-rose-400" : "text-emerald-400");
+}
+
+function hataMetni(err) {
+  const m = (err && err.message) || "";
+  if (m.indexOf("Invalid login") === 0) return "E-posta veya şifre hatalı.";
+  if (m.indexOf("Email not confirmed") === 0) return "Önce e-postanızdaki doğrulama bağlantısına tıklayın.";
+  if (m.indexOf("already registered") !== -1) return "Bu e-posta ile zaten kayıt var. Giriş yapın.";
+  return m || "Bir hata oluştu, tekrar deneyin.";
+}
+
+function girisEkraniGizle() { $('#girisEkrani').classList.add('hidden'); }
+function girisEkraniGoster() { $('#girisEkrani').classList.remove('hidden'); }
+
+function oturumAc(user) {
+  const ad = (user.user_metadata && user.user_metadata.ad) || 'Sen';
+  st.kullanici = {id: user.id, email: user.email, ad};
+  BEN.ad = ad;
+  girisEkraniGizle();
+  toast('Hoş geldin, ' + ad + ' 👋');
+  render();
+}
+
+async function hesapGiris() {
+  const email = $('#authEmail').value.trim();
+  const sifre = $('#authSifre').value;
+  if (!sb) return girisMesaj('Sunucu bağlı değil. Demo ile devam edin.', true);
+  if (!email || email.indexOf('@') < 1) return girisMesaj('Geçerli bir e-posta yazın (örn. ad@gmail.com).', true);
+  if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı.', true);
+  const {data, error} = await sb.auth.signInWithPassword({email, password: sifre});
+  if (error) return girisMesaj(hataMetni(error), true);
+  oturumAc(data.user);
+}
+
+async function hesapKayit() {
+  const ad = $('#authAd').value.trim();
+  const email = $('#authEmail').value.trim();
+  const sifre = $('#authSifre').value;
+  if (!sb) return girisMesaj('Sunucu bağlı değil. Demo ile devam edin.', true);
+  if (!ad) return girisMesaj('Adınızı yazın.', true);
+  if (!email || email.indexOf('@') < 1) return girisMesaj('Geçerli bir e-posta yazın (örn. ad@gmail.com).', true);
+  if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı.', true);
+  const {error} = await sb.auth.signUp({email, password: sifre, options: {data: {ad}}});
+  if (error) return girisMesaj(hataMetni(error), true);
+  girisMesaj('Doğrulama e-postası gönderildi. Bağlantıya tıklayıp giriş yapın.', false);
+}
+
+async function cikis() {
+  if (sb) await sb.auth.signOut();
+  st.kullanici = null;
+  BEN.ad = 'Sen';
+  girisEkraniGoster();
+  girisMesaj('', false);
+  render();
+}
+
+/* Şifre sıfırlama */
+const SITE_URL = "https://vibematch-app.pages.dev";
+
+async function sifreSifirlaIste() {
+  const email = $('#authEmail').value.trim();
+  if (!sb) return girisMesaj('Sunucu bağlı değil.', true);
+  if (!email || email.indexOf('@') < 1) return girisMesaj('Önce e-postanızı yazın.', true);
+  const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: SITE_URL});
+  if (error) return girisMesaj(hataMetni(error), true);
+  girisMesaj('Şifre sıfırlama bağlantısı e-postanıza gönderildi.', false);
+}
+
+/* Bağlantıya tıklanınca Supabase bu olayı verir: yeni şifre ekranını aç */
+function yeniSifreModu() {
+  st.sifreYenileme = true;
+  girisEkraniGoster();
+  $('#authAdAlan').classList.add('hidden');
+  const b = $('#authButon');
+  b.textContent = 'Yeni şifreyi kaydet';
+  b.dataset.m = 'yeni';
+  girisMesaj('Yeni şifrenizi girin (en az 6 karakter).', false);
+}
+
+async function yeniSifreKaydet() {
+  const sifre = $('#authSifre').value;
+  if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı.', true);
+  const {error} = await sb.auth.updateUser({password: sifre});
+  if (error) return girisMesaj(hataMetni(error), true);
+  st.sifreYenileme = false;
+  const {data} = await sb.auth.getSession();
+  if (data && data.session) oturumAc(data.session.user);
+  else girisMesaj('Şifreniz güncellendi. Şimdi giriş yapın.', false);
+}
+
+if (sb) {
+  sb.auth.onAuthStateChange((olay) => {
+    if (olay === 'PASSWORD_RECOVERY') yeniSifreModu();
+  });
+}
+
+/* Açılışta mevcut oturumu kontrol et */
+if (sb) {
+  sb.auth.getSession().then(({data}) => {
+    if (data && data.session) oturumAc(data.session.user);
+    else girisEkraniGoster();
+  });
+} else {
+  girisMesaj('Demo modu: sunucu henüz bağlı değil.', false);
+}
+
+/* Spotify veya YouTube bağlantısından gömülü oynatıcı adresi üretir */
+function sarkiCoz(url) {
+  const s = (url || "").trim();
+  let m = s.match(/open\.spotify\.com\/(track|album|playlist)\/([A-Za-z0-9]+)/);
+  if (m) return {embed: "https://open.spotify.com/embed/" + m[1] + "/" + m[2], kaynak: "spotify"};
+  m = s.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/);
+  if (m) return {embed: "https://www.youtube.com/embed/" + m[1], kaynak: "youtube"};
+  return null;
+}
+
+function sarkiKaydet() {
+  try {
+    if (st.sarki) localStorage.setItem("vm_sarki", JSON.stringify(st.sarki));
+    else localStorage.removeItem("vm_sarki");
+  } catch (err) {}
+}
+
+/* ---------- Olaylar ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const a = el.dataset.act;
+  const d = el.dataset;
+  switch (a) {
+    case 'sekme':
+      st.sekme = d.sekme;
+      if (d.sekme === 'mesajlar') st.sohbetId = null;
+      modalKapat();
+      render();
+      break;
+    case 'gec': swipe('sol'); break;
+    case 'begen': swipe('sag'); break;
+    case 'yenile': desteOlustur(); render(); break;
+    case 'kartmuzik': st.kartCalan = !st.kartCalan; render(); break;
+    case 'modalKapat': modalKapat(); break;
+    case 'sohbetAc': modalKapat(); sohbetAc(d.id); render(); break;
+    case 'sohbetKapat': st.sohbetId = null; render(); break;
+    case 'gonder': gonder(d.id); break;
+    case 'hikayeben':
+      if (sonHikaye()) hikayeAc({ad: BEN.ad, grad: BEN.grad, foto: sonHikaye(), metin: 'Hikayen 24 saat görünür ✨'});
+      else $('#hikayeDosya').click();
+      break;
+    case 'hikaye': {
+      const h = st.hikayeler[+d.i];
+      if (h) { h.goruldu = true; hikayeAc(h); }
+      break;
+    }
+    case 'hikayeKapat': hikayeKapat(); break;
+    case 'paylas': {
+      const t = $('#gonderiMetin').value.trim();
+      if (!t && !st.bekleyenFoto) { toast('Önce bir şey yaz ✍️'); break; }
+      st.benGonderiler.unshift({id: Date.now(), yazar: 'Sen', sehir: ESK, metin: t, grad: GRAD[Math.floor(Math.random() * GRAD.length)], begeni: 0, zaman: 'az önce', foto: st.bekleyenFoto, yorumlar: []}); st.bekleyenFoto = null;
+      toast('Paylaşıldı! Beğeniler puanına eklenecek ✨');
+      render();
+      break;
+    }
+    case 'begeniGonderi': {
+      const g = st.gonderiler.find(x => x.id == d.id);
+      if (!g) break;
+      g.begendim = !g.begendim;
+      g.begeni += g.begendim ? 1 : -1;
+      render();
+      break;
+    }
+    case 'vibe': st.vibe = d.v; toast('Ruh halin: ' + d.v); render(); break;
+    case 'notKaydet': {
+      const v = $('#notGiris').value.trim();
+      if (!v) { toast('Bir not yaz 📝'); break; }
+      st.not = {metin: v.slice(0, 60), t: Date.now()};
+      try { localStorage.setItem('vm_not', JSON.stringify(st.not)); } catch (err) {}
+      toast('Notun 24 saat görünecek 💬');
+      render();
+      break;
+    }
+    case 'fotoSec': fotoKurallari('gonderi'); break;
+    case 'yorumAc': st.acikYorum = st.acikYorum == d.id ? null : d.id; render(); break;
+    case 'yorumGonder': yorumGonder(d.id); break;
+    case 'profilFoto': fotoKurallari('profil'); break;
+    case 'authSekme': st.authMod = d.m; render(); break;
+    case 'authGonder': authGonder(); break;
+    case 'cikis': cikis(); break;
+    case 'sifreKaydet': sifreKaydet(); break;
+    case 'tema': st.tema = d.t; temaUygula(); render(); break;
+    case 'sikayetAc': sikayetAc(d.tur, d.id, d.ad); break;
+    case 'sikayetGonder': sikayetGonder(+d.i); break;
+    case 'engelleAc': engelleAc(d.id); break;
+    case 'engelOnay': engelOnay(d.id); break;
+    case 'engelKaldir': engelKaldir(d.id); break;
+    case 'fotoOnay': fotoOnayla(); break;
+    case 'sohbetFotoSec': fotoKurallari('sohbet'); break;
+    case 'fotoAc': {
+      const x = (st.sohbetler[d.id] || [])[+d.i];
+      if (x) { x.acik = true; render(); }
+      break;
+    }
+    case 'adminIslem': adminIslem(d.t, d.islem); break;
+    case 'adminOnay': adminOnay(d.t, d.islem); break;
+    case 'dil': dilDegistir(d.d); break;
+    case 'authMod': {
+      const kayit = d.m === 'kayit';
+      $('#authAdAlan').classList.toggle('hidden', !kayit);
+      const b = $('#authButon');
+      b.textContent = kayit ? 'Kayıt ol' : 'Giriş yap';
+      b.dataset.m = kayit ? 'kayit' : 'giris';
+      girisMesaj('', false);
+      break;
+    }
+    case 'authSubmit':
+      if (d.m === 'kayit') hesapKayit();
+      else if (d.m === 'yeni') yeniSifreKaydet();
+      else hesapGiris();
+      break;
+    case 'sifreUnuttum': sifreSifirlaIste(); break;
+    case 'demoGiris': girisEkraniGizle(); toast('Demo modundasın 🧪'); break;
+    case 'cikis': cikis(); break;
+    case 'sarkiEkle': {
+      const s = sarkiCoz($('#sarkiLink').value);
+      if (!s) { toast('Spotify veya YouTube bağlantısı yapıştır'); break; }
+      st.sarki = s; sarkiKaydet(); toast('Şarkın profiline eklendi 🎵'); render();
+      break;
+    }
+    case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
+    case 'cal': st.calan = !st.calan; render(); break;
+    case 'parca': st.parca = +d.i; st.ilerleme = 0; st.calan = true; render(); break;
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'mesajGiris' && st.sohbetId != null) gonder(st.sohbetId);
+  if (e.target.id && e.target.id.indexOf('yorum-') === 0) yorumGonder(e.target.id.slice(6));
+  if (e.target.id === 'notGiris') {
+    const b = document.querySelector('[data-act="notKaydet"]');
+    if (b) b.click();
+  }
+});
+
+/* ---------- Başlatma ---------- */
+try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
+try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
+try { st.tema = localStorage.getItem('vm_tema') === 'acik' ? 'acik' : 'koyu'; } catch (err) {}
+temaUygula();
+try {
+  const kayitli = JSON.parse(localStorage.getItem('vm_not') || 'null');
+  if (kayitli && Date.now() - kayitli.t < 864e5) st.not = kayitli;
+} catch (err) {}
+
+try {
+  const e = localStorage.getItem('vm_oturum');
+  if (e && hesaplar()[e] && !askidaListesi()[e]) st.oturum = e;
+} catch (err) {}
+try { st.engelli = okuListe("vm_engel").map(Number); } catch (err) { st.engelli = []; }
+try { st.dil = localStorage.getItem("vm_dil") || "tr"; } catch (err) { st.dil = "tr"; }
+hikayeleriTemizle();
+st.gonderiler.forEach(g => { g.yorumlar = g.yorumlar || []; });
+st.gonderiler[0].yorumlar.push({ad: "Elif", metin: "Harika fotoğraf!", zaman: "10 dk önce"});
+st.gonderiler[1].yorumlar.push({ad: "Mert", metin: "Ben de geliyorum ☕", zaman: "30 dk önce"});
+desteOlustur();
+render();
+setInterval(() => { if (hikayeleriTemizle() && st.sekme === 'akis') render(); }, 60000);
+
+/* Müzik oynatıcı ilerlemesi (prototip: sahte ilerleme) */
+setInterval(() => {
+  if (!st.calan || st.sekme !== 'profil') return;
+  st.ilerleme += 1.2;
+  if (st.ilerleme >= 100) {
+    st.ilerleme = 0;
+    st.parca = (st.parca + 1) % SARKILAR.length;
+    render();
+    return;
+  }
+  const i = $('#ilerleme');
+  if (i) i.style.width = st.ilerleme + '%';
+}, 500);
+
+/* Gönderilere sahte beğeni gelmesi (puan akışını gösterir) */
+setInterval(() => {
+  if (!st.benGonderiler.length) return;
+  const g = st.benGonderiler[Math.floor(Math.random() * st.benGonderiler.length)];
+  g.begeni++;
+  toast('💗 Bir gönderin beğenildi! +10 puan');
+  if (st.sekme === 'liderlik' || st.sekme === 'profil') render();
+  else $('#puanRozet').textContent = puanHesapla();
+}, 25000);
+</script>
+<script>
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
