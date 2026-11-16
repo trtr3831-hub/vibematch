@@ -2428,20 +2428,27 @@ async function aiBio() {
 /* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
 function reelsAc() {
   const liste = st.reels;
+  const kullanici = st.kullanici ? st.kullanici.ad || "sen" : "sen";
   const icerik = liste.length
     ? liste.map((r, i) => `
-        <section class="h-full snap-start relative bg-black flex items-center justify-center overflow-hidden">
+        <section class="h-full snap-start relative bg-black overflow-hidden">
           ${r.tip === "video"
-            ? `<video src="${r.url}" controls playsinline loop class="max-h-full w-full object-contain"></video>`
-            : `<img src="${r.url}" class="max-h-full w-full object-contain">`}
-          <div class="absolute right-3 bottom-24 flex flex-col items-center gap-5 text-white">
+            ? `<video src="${r.url}" autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover" onclick="this.paused ? this.play() : this.pause()"></video>`
+            : `<img src="${r.url}" class="absolute inset-0 w-full h-full object-cover">`}
+          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
+          <div class="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
             <button data-act="reelBegen" data-i="${i}" class="flex flex-col items-center text-2xl">${r.begendim ? "❤️" : "🤍"}<span class="text-[11px] mt-0.5">${r.begeni || 0}</span></button>
             <button class="flex flex-col items-center text-2xl">💬<span class="text-[11px] mt-0.5">0</span></button>
-            <button data-act="profilPaylas" class="flex flex-col items-center text-2xl">↗️</button>
+            <button data-act="profilPaylas" class="flex flex-col items-center text-2xl">↗️<span class="text-[11px] mt-0.5">Paylaş</span></button>
+            <button data-act="reelKaydet" data-i="${i}" class="flex flex-col items-center text-2xl">${r.kaydedildi ? "🔖" : "📑"}<span class="text-[11px] mt-0.5">Kaydet</span></button>
+            <button class="text-2xl" aria-label="Diğer">⋯</button>
           </div>
-          <div class="absolute left-4 right-16 bottom-6 text-white">
-            <div class="font-semibold text-sm">@${esc(String(r.yazar || "sen").toLowerCase())}</div>
-            ${r.metin ? `<div class="text-sm mt-1">${esc(r.metin)}</div>` : ""}
+          <div class="absolute left-4 right-20 bottom-8 text-white">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm" style="background:${BEN.grad}">${esc((kullanici[0] || "s").toUpperCase())}</div>
+              <span class="font-semibold text-sm">@${esc(String(kullanici).toLowerCase().replace(/\s+/g, ""))}</span>
+            </div>
+            ${r.metin ? `<p class="text-sm mt-2">${esc(r.metin)}</p>` : ""}
           </div>
         </section>`).join("")
     : `<div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 gap-3">
@@ -2659,6 +2666,7 @@ document.addEventListener('click', e => {
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
     case 'notDuzenle': notDuzenle(); break;
+    case 'reelKaydet': { const r = st.reels[+d.i]; if (r) { r.kaydedildi = !r.kaydedildi; reelsAc(); } break; }
     case 'reelBegen': {
       const r = st.reels[+d.i];
       if (r) { r.begendim = !r.begendim; r.begeni = (r.begeni || 0) + (r.begendim ? 1 : -1); reelsAc(); }
