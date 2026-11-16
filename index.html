@@ -2688,6 +2688,7 @@ function reelsAc() {
       </div>
       <div class="h-full overflow-y-auto snap-y snap-mandatory">${icerik}</div>
     </div>`);
+  document.querySelectorAll('.sekme').forEach(b => b.setAttribute('aria-current', String(b.dataset.act === 'reelsAc')));
   $('#modal').style.bottom = '84px';
 }
 
