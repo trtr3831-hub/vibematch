@@ -1740,6 +1740,7 @@ document.addEventListener('change', e => {
   if (e.target.id !== 'reelsDosya') return;
   const f = e.target.files[0];
   e.target.value = '';
+  if (f && document.getElementById('reelFormMetin')) { st.reelFormDosya = f; const el = document.getElementById('reelFormDosyaAd'); if (el) el.textContent = '🎞️ ' + f.name; return; }
   if (f) reelsDosyaIsle(f);
 });
 
@@ -2421,19 +2422,18 @@ function dbGonderiHTML(g) {
 /* ---------- Reels (sunucu) ---------- */
 async function reelYukle() {
   if (!sb || !st.kullanici) return;
-  const {data} = await sb.from("reeller").select("id,user_id,yazar,metin,url,tip").order("created_at", {ascending: false}).limit(30);
-  st.dbReeller = (data || []).map(r => ({db: true, id: r.id, benim: r.user_id === st.kullanici.id, yazar: r.yazar || "kullanici", metin: r.metin || "", url: r.url, tip: r.tip, begeni: 0, begendim: false}));
+  const {data} = await sb.from("reeller").select("id,user_id,yazar,metin,url,tip,sarki").order("created_at", {ascending: false}).limit(30);
+  st.dbReeller = (data || []).map(r => ({db: true, id: r.id, benim: r.user_id === st.kullanici.id, yazar: r.yazar || "kullanici", metin: r.metin || "", url: r.url, tip: r.tip, sarki: r.sarki, begeni: 0, begendim: false}));
 }
 
-async function reelYukleDosya(f) {
+async function reelYukleDosya(f, metin, sarki) {
   const tip = f.type.indexOf("video") === 0 ? "video" : "image";
   const yol = st.kullanici.id + "/" + Date.now() + "-" + f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const {error} = await sb.storage.from("reels").upload(yol, f, {contentType: f.type});
   if (error) return toast("Yüklenemedi: " + error.message);
   const {data} = sb.storage.from("reels").getPublicUrl(yol);
-  const girdi = document.getElementById("gonderiMetin");
-  const metin = girdi ? girdi.value.trim().slice(0, 150) : "";
-  const {error: e2} = await sb.from("reeller").insert({yazar: BEN.ad, metin: metin, url: data.publicUrl, tip: tip});
+  if (metin === undefined) { const girdi = document.getElementById("gonderiMetin"); metin = girdi ? girdi.value.trim().slice(0, 150) : ""; }
+  const {error: e2} = await sb.from("reeller").insert({yazar: BEN.ad, metin: metin, url: data.publicUrl, tip: tip, sarki: sarki ? sarki.embed : null});
   if (e2) return toast("Kaydedilemedi: " + e2.message);
   toast("Reels yayında 🎬");
   reelYukle().then(() => reelsAc());
@@ -2499,6 +2499,41 @@ function gelenReelHTML() {
       <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl bg-white/10">🎬</div>
       <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">${esc(m.gonderenAd)} sana bir reels gönderdi</div><div class="text-[11px] text-slate-400">${zamanYaz(m.created_at)}</div></div>
     </button>`).join("") + `<div class="mb-4"></div>`;
+}
+
+/* Reels paylaşım formu: foto/video, açıklama, şarkı */
+function reelFormAc() {
+  st.reelFormDosya = null;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black">Yeni reels</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <button data-act="reelFormDosyaSec" class="w-full py-8 rounded-2xl border border-dashed border-white/25 text-sm text-slate-300">
+        <span id="reelFormDosyaAd">🎞️ Foto ya da video seç</span>
+      </button>
+      <textarea id="reelFormMetin" maxlength="150" rows="2" placeholder="Açıklama yaz…" class="w-full mt-4 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400"></textarea>
+      <input id="reelFormSarki" placeholder="🎵 Şarkı bağlantısı (Spotify ya da YouTube)" class="w-full mt-3 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+      <p id="reelFormMesaj" class="text-xs text-rose-400 min-h-[1rem] mt-2"></p>
+      <button data-act="reelFormGonder" class="w-full mt-3 py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Paylaş</button>
+    </div>`);
+}
+
+async function reelFormGonder() {
+  const mesaj = document.getElementById("reelFormMesaj");
+  const f = st.reelFormDosya;
+  const metin = document.getElementById("reelFormMetin").value.trim().slice(0, 150);
+  const sarkiGirdi = document.getElementById("reelFormSarki").value.trim();
+  const sarki = sarkiGirdi ? sarkiCoz(sarkiGirdi) : null;
+  if (!f) { mesaj.textContent = "Önce bir foto ya da video seçin."; return; }
+  if (sarkiGirdi && !sarki) { mesaj.textContent = "Şarkı bağlantısı Spotify ya da YouTube olmalı."; return; }
+  mesaj.textContent = "";
+  st.reelFormDosya = null;
+  modalKapat();
+  if (sb && st.kullanici) { await reelYukleDosya(f, metin, sarki); return; }
+  st.reels.unshift({tip: f.type.indexOf("video") === 0 ? "video" : "image", url: URL.createObjectURL(f), metin, yazar: "Sen", sarki: sarki ? sarki.embed : null});
+  reelsAc();
 }
 
 /* Yeni kullanıcıların keşif ızgarası */
@@ -2622,6 +2657,7 @@ function reelsAc() {
               <span class="font-semibold text-sm">@${esc(String(kullanici).toLowerCase().replace(/\s+/g, ""))}</span>
             </div>
             ${r.metin ? `<p class="text-sm mt-2">${esc(r.metin)}</p>` : ""}
+            ${r.sarki ? `<iframe src="${r.sarki}" class="w-full rounded-xl mt-2" height="80" frameborder="0" allow="autoplay; encrypted-media; clipboard-write" loading="lazy"></iframe>` : ""}
           </div>
         </section>`).join("")
     : `<div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 gap-3">
@@ -2881,7 +2917,9 @@ document.addEventListener('click', e => {
       if (hedef && satir) { hedef.value = satir; hedef.focus(); }
       break;
     }
-    case 'reelsEkle': $('#reelsDosya').click(); break;
+    case 'reelsEkle': reelFormAc(); break;
+    case 'reelFormDosyaSec': $('#reelsDosya').click(); break;
+    case 'reelFormGonder': reelFormGonder(); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
