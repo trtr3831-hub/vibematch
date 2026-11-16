@@ -104,9 +104,10 @@
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-4 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="ara" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔎</span>Ara</button>
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
+    <button data-act="reelsAc" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🎬</span>Reels</button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
   </nav>
@@ -427,11 +428,6 @@ function akisHTML() {
           </div>
           <span class="text-[11px] text-slate-300 w-16 truncate text-center">${h.benim ? "Hikayen" : esc(h.ad)}</span>
         </button>`).join("")}
-    </div>
-
-    <div class="flex gap-2 mb-3">
-      <button data-act="reelsAc" class="flex-1 py-2 rounded-full border border-white/20 text-sm">🎬 Reels</button>
-      <button data-act="reelsEkle" class="flex-1 py-2 rounded-full border border-white/20 text-sm">➕ Foto / video ekle</button>
     </div>
     <div class="rounded-2xl bg-white/5 border border-white/10 p-3 mb-4">
       <textarea id="gonderiMetin" rows="2" maxlength="180" placeholder="Bugün Eskişehir&#39;de ne oluyor?" class="w-full bg-transparent outline-none text-sm resize-none"></textarea>
