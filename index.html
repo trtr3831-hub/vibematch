@@ -35,7 +35,8 @@
   .eq.cal span:nth-child(3){animation-delay:.4s}
   .eq.cal span:nth-child(4){animation-delay:.1s}
   @keyframes eq{0%,100%{height:4px}50%{height:16px}}
-  .sekme[aria-current="true"]{color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,.7)}
+  .sekme{padding:8px 0;border-radius:999px;transition:background .2s,color .2s}
+  .sekme[aria-current="true"]{color:#fff;background:linear-gradient(90deg,rgba(255,46,136,.35),rgba(0,229,255,.35))}
   .sekme[aria-current="true"] .ikon{transform:translateY(-2px) scale(1.15)}
   .ikon{transition:transform .2s}
   .cip{border:1px solid #ffffff26;border-radius:999px;padding:4px 10px;font-size:12px;background:#ffffff0d;white-space:nowrap}
@@ -101,9 +102,9 @@
     <div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
-  <main id="gorunum" class="flex-1 kaydir px-4 pb-4"></main>
+  <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="grid grid-cols-5 border-t border-white/10 bg-black/50 backdrop-blur-xl pt-2 pb-[max(env(safe-area-inset-bottom),8px)]">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="kesfet" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔥</span><span data-i18n="nav_kesfet">Keşfet</span></button>
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
     <button data-act="sekme" data-sekme="liderlik" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🏆</span><span data-i18n="nav_liderlik">Liderlik</span></button>
