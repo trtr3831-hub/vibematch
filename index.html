@@ -217,6 +217,7 @@ const st = {
   gruplar: [],
   grupAcik: null,
   bildirimler: [],
+  takipEdilen: [],
   kirpResim: null,
   oturum: null,
   dil: "tr",
@@ -304,6 +305,7 @@ function kesfetHTML() {
       <div id="dmg-sol" class="absolute top-6 left-6 -rotate-12 border-4 border-rose-500 text-rose-500 font-black text-3xl px-3 rounded-lg opacity-0 pointer-events-none">GEÇ</div>
       <div class="absolute bottom-0 left-0 right-0 p-5 space-y-2">
         <h2 class="text-3xl font-black">${esc(p.ad)}, ${p.yas}</h2>
+        <button data-act="profilGor" data-id="${p.id}" class="text-xs text-cyan-300 underline text-left">👤 Profili gör · ${takipciSayisi(p)} takipçi</button>
         <p class="text-sm text-slate-200">🎓 ${esc(p.bolum)}</p>
         <p class="text-sm text-slate-300">${esc(p.bio)}</p>
         <div class="flex flex-wrap gap-1.5 pt-1">${p.ilgi.map(i => `<span class="cip ${ort.includes(i) ? 'ortak' : ''}">${esc(i)}</span>`).join('')}</div>
@@ -638,6 +640,7 @@ function profilHTML() {
       <h2 class="mt-3 text-2xl font-black">${BEN.ad}, ${BEN.yas}</h2>
       <p class="text-sm text-slate-400">📍 ${esc(BEN.sehir)} · ${esc(BEN.bolum)}</p>
       <p class="text-sm mt-1">${esc(BEN.bio)}</p>
+      <p class="text-xs text-slate-400 mt-1">👥 ${takipciBen()} takipçi · ${st.takipEdilen.length} takip ettiğin</p>
       <button data-act="profilFoto" class="text-xs text-cyan-300 underline mt-2">📷 Galeriden fotoğraf seç</button>
       ${st.kullanici ? `<div class="text-[11px] text-slate-500 mt-1">${esc(st.kullanici.email)} · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button></div>` : ""}
       <div class="flex gap-6 mt-4 text-center">
@@ -1895,6 +1898,53 @@ function sarkiKaydet() {
   } catch (err) {}
 }
 
+/* ---------- Takip (bu cihazda) ---------- */
+function takipKaydet() {
+  try { localStorage.setItem("vm_takip", JSON.stringify(st.takipEdilen)); } catch (err) {}
+}
+
+/* Şimdilik yalnızca bu cihazdaki takipler sayılır; gerçek takipçi sayısı veritabanıyla gelecek */
+function takipciSayisi(p) {
+  return st.takipEdilen.includes(p.id) ? 1 : 0;
+}
+
+function takipciBen() {
+  return 0;
+}
+
+function profilGor(id) {
+  const p = kisi(id);
+  if (!p) return;
+  const takipte = st.takipEdilen.includes(p.id);
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Profil</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black" style="background:${p.grad}">${esc(p.ad[0])}</div>
+        <h3 class="mt-3 text-2xl font-black">${esc(p.ad)}, ${p.yas}</h3>
+        <p class="text-sm text-slate-400">📍 ${esc(p.sehir)} · ${esc(p.bolum)}</p>
+        <p class="text-sm mt-2">${esc(p.bio)}</p>
+        <div class="flex flex-wrap justify-center gap-1.5 mt-3">${p.ilgi.map(i => `<span class="cip ${BEN.ilgi.includes(i) ? "ortak" : ""}">${esc(i)}</span>`).join("")}</div>
+        <p class="text-sm text-slate-300 mt-4">👥 <strong>${takipciSayisi(p)}</strong> takipçi</p>
+        <button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full ${takipte ? "border border-white/20" : "bg-gradient-to-r from-pink-500 to-cyan-400 font-bold"}">${takipte ? "Takibi bırak" : "Takip et"}</button>
+        <p class="text-[11px] text-slate-500 mt-3">Takipçi sayısı şimdilik yalnızca bu cihazda görünür.</p>
+      </div>
+    </div>`);
+}
+
+function takipToggle(id) {
+  const n = Number(id);
+  const var_ = st.takipEdilen.includes(n);
+  st.takipEdilen = var_ ? st.takipEdilen.filter(x => x !== n) : [...st.takipEdilen, n];
+  takipKaydet();
+  toast(var_ ? "Takipten çıkıldı" : "Takip ediliyor ✅");
+  profilGor(n);
+  render();
+}
+
 /* ---------- Bildirimler (bu cihazda) ---------- */
 function bildirimKaydet() {
   try { localStorage.setItem("vm_bildirim", JSON.stringify(st.bildirimler.slice(0, 50))); } catch (err) {}
@@ -2352,6 +2402,8 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'profilGor': profilGor(d.id); break;
+    case 'takipToggle': takipToggle(d.id); break;
     case 'bildirimAc': bildirimAc(); break;
     case 'bildirimTemizle': st.bildirimler = []; bildirimKaydet(); bildirimRozetGuncelle(); modalKapat(); break;
     case 'kirpKaydet': kirpKaydet(); break;
@@ -2391,6 +2443,7 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Başlatma ---------- */
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
+try { st.takipEdilen = JSON.parse(localStorage.getItem('vm_takip') || '[]') || []; } catch (err) {}
 try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
 try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
