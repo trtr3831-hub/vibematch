@@ -218,6 +218,7 @@ const st = {
   grupAcik: null,
   bildirimler: [],
   takipEdilen: [],
+  gizlilik: "herkes",
   kirpResim: null,
   oturum: null,
   dil: "tr",
@@ -641,6 +642,7 @@ function profilHTML() {
       <p class="text-sm text-slate-400">📍 ${esc(BEN.sehir)} · ${esc(BEN.bolum)}</p>
       <p class="text-sm mt-1">${esc(BEN.bio)}</p>
       <p class="text-xs text-slate-400 mt-1">👥 ${takipciBen()} takipçi · ${st.takipEdilen.length} takip ettiğin</p>
+      <p class="text-[11px] text-slate-500 mt-1">${st.gizlilik === "takipci" ? "🔒 Yalnızca takipçilere açık" : "🌐 Herkese açık"}</p>
       <button data-act="profilFoto" class="text-xs text-cyan-300 underline mt-2">📷 Galeriden fotoğraf seç</button>
       ${st.kullanici ? `<div class="text-[11px] text-slate-500 mt-1">${esc(st.kullanici.email)} · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button></div>` : ""}
       <div class="flex gap-6 mt-4 text-center">
@@ -1793,6 +1795,7 @@ function oturumAc(user) {
   BEN.ad = ad;
   BEN.yas = (user.user_metadata && user.user_metadata.yas) || BEN.yas;
   BEN.bio = (user.user_metadata && user.user_metadata.bio) || BEN.bio;
+  st.gizlilik = (user.user_metadata && user.user_metadata.gizlilik) || st.gizlilik;
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
@@ -2246,6 +2249,13 @@ function ayarlarAc() {
           <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
         </div>
         <div>
+          <label class="text-xs text-slate-400">Hesap görünürlüğü</label>
+          <select id="ayarGizlilik" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+            <option value="herkes" ${st.gizlilik === "herkes" ? "selected" : ""}>Herkese açık</option>
+            <option value="takipci" ${st.gizlilik === "takipci" ? "selected" : ""}>Yalnızca takipçilere açık</option>
+          </select>
+        </div>
+        <div>
           <label class="text-xs text-slate-400">Yaş</label>
           <input id="ayarYas" type="number" min="18" max="99" value="${BEN.yas}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
         </div>
@@ -2271,6 +2281,7 @@ async function ayarKaydet() {
   const ad = document.getElementById("ayarAd").value.trim();
   const yas = parseInt(document.getElementById("ayarYas").value, 10);
   const bio = document.getElementById("ayarBio").value.trim().slice(0, 120);
+  const gizlilik = document.getElementById("ayarGizlilik").value === "takipci" ? "takipci" : "herkes";
   const sifre = document.getElementById("ayarSifre").value;
   const sifre2 = document.getElementById("ayarSifre2").value;
   if (!ad) return ayarMesaj("Adınızı yazın.", true);
@@ -2280,7 +2291,7 @@ async function ayarKaydet() {
     if (sifre !== sifre2) return ayarMesaj("Şifreler birbiriyle aynı değil.", true);
   }
   if (sb && st.kullanici) {
-    const {error} = await sb.auth.updateUser({data: {ad, yas, bio}});
+    const {error} = await sb.auth.updateUser({data: {ad, yas, bio, gizlilik}});
     if (error) return ayarMesaj(hataMetni(error), true);
     if (sifre) {
       const r = await sb.auth.updateUser({password: sifre});
@@ -2290,6 +2301,8 @@ async function ayarKaydet() {
   BEN.ad = ad;
   BEN.yas = yas;
   BEN.bio = bio;
+  st.gizlilik = gizlilik;
+  try { localStorage.setItem("vm_gizlilik", gizlilik); } catch (err) {}
   if (st.kullanici) st.kullanici.ad = ad;
   modalKapat();
   toast(sifre ? "Bilgilerin ve şifren güncellendi ✅" : "Bilgilerin güncellendi ✅");
@@ -2444,6 +2457,7 @@ document.addEventListener('keydown', e => {
 /* ---------- Başlatma ---------- */
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
 try { st.takipEdilen = JSON.parse(localStorage.getItem('vm_takip') || '[]') || []; } catch (err) {}
+try { st.gizlilik = localStorage.getItem('vm_gizlilik') === 'takipci' ? 'takipci' : st.gizlilik; } catch (err) {}
 try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
 try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
