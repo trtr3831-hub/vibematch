@@ -694,39 +694,13 @@ function profilHTML() {
       ${profilGonderiHTML()}
     </section>
 
-    <section class="mt-6">
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Tema</h3>
-      <div class="flex gap-2">
-        <button data-act="tema" data-t="koyu" class="cip ${st.tema === "koyu" ? "secili" : ""}">🌙 Koyu</button>
-        <button data-act="tema" data-t="acik" class="cip ${st.tema === "acik" ? "secili" : ""}">☀️ Açık</button>
-      </div>
-    </section>
+    
 
-    <section class="mt-6">
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Ruh halin</h3>
-      <div class="flex flex-wrap gap-2">
-        ${VIBELAR.map(v => `<button data-act="vibe" data-v="${v}" class="cip ${st.vibe === v ? "secili" : ""}">${v}</button>`).join("")}
-      </div>
-    </section>
+    
 
-    <section class="mt-6">
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Notun (24 saat görünür)</h3>
-      ${notKutusu}
-      <div class="flex gap-2">
-        <input id="notGiris" maxlength="60" placeholder="Ne düşünüyorsun? (60 karakter)" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
-        <button data-act="notKaydet" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Paylaş</button>
-      </div>
-    </section>
+    
 
-    <section class="mt-6">
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Şu an dinlediğin şarkı</h3>
-      ${st.sarki ? `<iframe src="${st.sarki.embed}" class="w-full rounded-2xl" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture" loading="lazy"></iframe>
-        <button data-act="sarkiSil" class="mt-2 text-xs text-rose-400 underline">Şarkıyı kaldır</button>` : `<p class="text-xs text-slate-500 mb-2">Spotify veya YouTube bağlantısı yapıştır, şarkın burada çalsın.</p>`}
-      <div class="flex gap-2 mt-2">
-        <input id="sarkiLink" placeholder="https://open.spotify.com/track/..." class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
-        <button data-act="sarkiEkle" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Ekle</button>
-      </div>
-    </section>
+    
   </div>`;
 }
 
@@ -2326,8 +2300,17 @@ function notRozetHTML() {
 }
 
 function notDuzenle() {
-  st.sekme = "profil";
-  render();
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Notun (24 saat görünür)</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <div class="flex gap-2">
+        <input id="notGiris" maxlength="60" placeholder="Ne düşünüyorsun? (60 karakter)" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
+        <button data-act="notKaydet" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Paylaş</button>
+      </div>
+    </div>`);
   setTimeout(() => { const g = document.getElementById("notGiris"); if (g) g.focus(); }, 60);
 }
 
