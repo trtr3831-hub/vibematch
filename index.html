@@ -611,7 +611,7 @@ function mesajHTML() {
         const ok = st.okunmamis[id] || 0;
         const onizleme = son ? (son.g === 'me' ? 'Sen: ' : '') + esc(son.t) : '';
         return `
-        <button data-act="sohbetAc" data-id="${id}" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-left">
+        <button data-act="sohbetAc" data-id="${id}" class="w-full flex items-center gap-3 py-3 border-b border-white/10 text-left">
           ${avatar(p, 'w-12 h-12 text-lg')}
           <div class="flex-1 min-w-0">
             <div class="inline-block max-w-full truncate text-[10px] bg-white text-black rounded-xl px-2 py-0.5 mb-1">${esc(p.not)}</div>
