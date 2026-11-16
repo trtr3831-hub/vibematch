@@ -213,6 +213,8 @@ const st = {
   kullanici: null,
   sarki: null,
   reels: [],
+  gruplar: [],
+  grupAcik: null,
   oturum: null,
   dil: "tr",
   engelli: [],
@@ -559,9 +561,22 @@ function sohbetHTML(id) {
 }
 
 function mesajHTML() {
+  if (st.grupAcik != null) return grupHTML(st.grupAcik);
   if (st.sohbetId != null) return sohbetHTML(st.sohbetId);
+  const grupBolumu = `
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-xs uppercase tracking-widest text-slate-400">Gruplar</h3>
+      <button data-act="grupOlustur" class="px-3 py-1 rounded-full border border-white/20 text-xs">👥 Grup oluştur</button>
+    </div>
+    ${st.gruplar.length ? st.gruplar.map(g => `
+      <button data-act="grupAc" data-id="${g.id}" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-left mb-2">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center font-black bg-gradient-to-br from-pink-500 to-cyan-400">${esc(g.ad[0])}</div>
+        <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(g.ad)}</div><div class="text-xs text-slate-400 truncate">${g.uyeler.length + 1} kişi · ${g.mesajlar.length} mesaj</div></div>
+      </button>`).join("") : `<p class="text-xs text-slate-500 mb-4">Henüz grubun yok. Eşleştiğin kişilerle grup kurabilirsin.</p>`}
+    <div class="mb-5"></div>`;
+  if (!st.eslesmeler.length) return grupBolumu + `<div class="text-center text-slate-400 py-10">Henüz eşleşmen yok. Keşfet sekmesinde kaydır! 💗</div>`;
   if (!aktifEslesmeler().length) return `<div class="text-center text-slate-400 py-20">Henüz eşleşmen yok. Keşfet sekmesinde kaydır! 💗</div>`;
-  return `
+  return grupBolumu + `
   <div class="giris">
     <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Eşleşmeler</h3>
     <div class="kaydir overflow-x-auto flex gap-4 mb-5 -mx-4 px-4">
@@ -1874,6 +1889,86 @@ function sarkiKaydet() {
   } catch (err) {}
 }
 
+/* ---------- Gruplar (yalnızca bu cihazda) ---------- */
+function grupKaydet() {
+  try { localStorage.setItem("vm_gruplar", JSON.stringify(st.gruplar)); } catch (err) {}
+}
+
+function grupOlustur() {
+  const secim = st.eslesmeler.map(id => {
+    const p = kisi(id);
+    return `<label class="flex items-center gap-3 p-2 rounded-xl bg-white/5">
+      <input type="checkbox" name="grupUye" value="${p.id}" class="w-4 h-4">
+      <span class="text-sm">${esc(p.ad)}</span></label>`;
+  }).join("");
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Yeni grup</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <input id="grupAd" maxlength="30" placeholder="Grup adı (ör. Kütüphane ekibi)" class="w-full mb-4 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+      <p class="text-xs text-slate-400 mb-2">Eşleştiğin kişilerden seç:</p>
+      <div class="space-y-2 mb-4">${secim || '<p class="text-xs text-slate-500">Grup için önce eşleşmen olmalı.</p>'}</div>
+      <p id="grupMesaj" class="text-xs text-center min-h-[1rem] text-rose-400"></p>
+      <button data-act="grupKaydet" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Grubu oluştur</button>
+      <p class="text-[11px] text-slate-500 text-center mt-3">Grup şimdilik yalnızca bu cihazda görünür.</p>
+    </div>`);
+}
+
+function grupKaydetIslem() {
+  const ad = document.getElementById("grupAd").value.trim();
+  const secilen = [...document.querySelectorAll('input[name="grupUye"]:checked')].map(i => Number(i.value));
+  const hata = document.getElementById("grupMesaj");
+  if (!ad) { if (hata) hata.textContent = "Grup adı yazın."; return; }
+  if (!secilen.length) { if (hata) hata.textContent = "En az bir kişi seçin."; return; }
+  const g = {id: Date.now(), ad, uyeler: secilen, mesajlar: []};
+  st.gruplar.unshift(g);
+  grupKaydet();
+  modalKapat();
+  st.grupAcik = g.id;
+  st.sekme = "mesajlar";
+  toast("Grup oluşturuldu 👥");
+  render();
+}
+
+function grupHTML(id) {
+  const g = st.gruplar.find(x => x.id == id);
+  if (!g) { st.grupAcik = null; return ""; }
+  const uyeAdlari = g.uyeler.map(u => (kisi(u) || {}).ad).filter(Boolean).join(", ");
+  return `
+  <div class="flex flex-col min-h-full giris">
+    <div class="flex items-center gap-3 pb-3 border-b border-white/10 sticky top-0 bg-[#0d0818] z-10">
+      <button data-act="grupKapat" class="text-xl px-2">←</button>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-black bg-gradient-to-br from-pink-500 to-cyan-400">${esc(g.ad[0])}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold truncate">${esc(g.ad)}</div>
+        <div class="text-[11px] text-slate-400 truncate">Sen, ${esc(uyeAdlari)}</div>
+      </div>
+    </div>
+    <p class="text-[11px] text-slate-500 text-center py-2">Bu grup şimdilik yalnızca bu cihazda görünür.</p>
+    <div class="flex-1 space-y-2 py-2">
+      ${g.mesajlar.map(m => `<div class="flex justify-end"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-pink-500 to-fuchsia-600 text-sm">${esc(m.t)}<div class="text-[10px] text-white/70 mt-0.5 text-right">${m.s}</div></div></div>`).join("") || '<p class="text-xs text-slate-500 text-center">Henüz mesaj yok.</p>'}
+    </div>
+    <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
+      <input id="grupGiris" maxlength="200" placeholder="Gruba yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 outline-none focus:border-cyan-400 text-sm">
+      <button data-act="grupGonder" data-id="${g.id}" class="px-4 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Gönder</button>
+    </div>
+  </div>`;
+}
+
+function grupGonder(id) {
+  const g = st.gruplar.find(x => x.id == id);
+  const inp = document.getElementById("grupGiris");
+  const t = inp ? inp.value.trim() : "";
+  if (!g || !t) return;
+  g.mesajlar.push({t: t.slice(0, 200), s: saat()});
+  grupKaydet();
+  render();
+  const yeni = document.getElementById("grupGiris");
+  if (yeni) yeni.focus();
+}
+
 /* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
 const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
 
@@ -2045,7 +2140,7 @@ document.addEventListener('click', e => {
   switch (a) {
     case 'sekme':
       st.sekme = d.sekme;
-      if (d.sekme === 'mesajlar') st.sohbetId = null;
+      if (d.sekme === 'mesajlar') { st.sohbetId = null; st.grupAcik = null; }
       modalKapat();
       render();
       break;
@@ -2142,6 +2237,11 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'grupOlustur': grupOlustur(); break;
+    case 'grupKaydet': grupKaydetIslem(); break;
+    case 'grupAc': st.grupAcik = +d.id; render(); break;
+    case 'grupKapat': st.grupAcik = null; render(); break;
+    case 'grupGonder': grupGonder(d.id); break;
     case 'aiTanisma': aiTanisma(d.id); break;
     case 'aiDuzelt': aiDuzelt(); break;
     case 'aiBio': aiBio(); break;
@@ -2164,6 +2264,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   if (e.target.id === 'mesajGiris' && st.sohbetId != null) gonder(st.sohbetId);
   if (e.target.id && e.target.id.indexOf('yorum-') === 0) yorumGonder(e.target.id.slice(6));
+  if (e.target.id === 'grupGiris' && st.grupAcik != null) grupGonder(st.grupAcik);
   if (e.target.id === 'notGiris') {
     const b = document.querySelector('[data-act="notKaydet"]');
     if (b) b.click();
@@ -2172,6 +2273,7 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Başlatma ---------- */
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
+try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
 try { st.tema = localStorage.getItem('vm_tema') === 'acik' ? 'acik' : 'koyu'; } catch (err) {}
 temaUygula();
