@@ -116,6 +116,7 @@
   <input type="file" id="hikayeDosya" accept="image/*" class="hidden">
   <input type="file" id="profilDosya" accept="image/*" class="hidden">
   <input type="file" id="reelsDosya" accept="image/*,video/*" class="hidden">
+  <input type="file" id="kameraDosya" accept="image/*,video/*" capture="environment" class="hidden">
   <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
     <div class="w-full max-w-xs text-center">
       <div class="text-3xl font-black neon mb-1">VibeMatch</div>
@@ -432,6 +433,7 @@ function akisHTML() {
       <div class="flex justify-between items-center mt-2">
         <div class="flex items-center gap-2">
           <button data-act="fotoSec" class="px-3 py-1.5 rounded-full border border-white/20 text-xs">📷 ${st.bekleyenFoto ? "Fotoğraf seçildi ✓" : "Fotoğraf"}</button>
+          <button data-act="kameraAc" class="px-3 py-1.5 rounded-full border border-white/20 text-xs">📸 Kamera</button>
           <span class="text-[11px] text-slate-500">Beğeni aldıkça puan</span>
         </div>
         <button data-act="paylas" class="px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-sm font-bold">Paylaş</button>
@@ -1729,6 +1731,23 @@ document.addEventListener('change', e => {
   e.target.value = '';
 });
 
+/* Kameradan çekilen dosya */
+document.addEventListener('change', e => {
+  if (e.target.id !== 'kameraDosya') return;
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  if (f.type.indexOf('video') === 0) { reelsDosyaIsle(f); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    st.bekleyenFoto = r.result;
+    const b = document.querySelector('[data-act="fotoSec"]');
+    if (b) b.textContent = '📷 Fotoğraf seçildi ✓';
+    toast("Fotoğraf hazır, Paylaş düğmesine basabilirsin 📸");
+  };
+  r.readAsDataURL(f);
+});
+
 /* Reels dosyası seçimi */
 document.addEventListener('change', e => {
   if (e.target.id !== 'reelsDosya') return;
@@ -2467,6 +2486,7 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'kameraAc': $('#kameraDosya').click(); break;
     case 'profilGor': profilGor(d.id); break;
     case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
     case 'takipToggle': takipToggle(d.id); break;
