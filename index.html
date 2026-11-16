@@ -114,6 +114,7 @@
   <div id="toast" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 py-2 rounded-full text-sm font-semibold shadow-lg whitespace-nowrap"></div>
   <input type="file" id="hikayeDosya" accept="image/*" class="hidden">
   <input type="file" id="profilDosya" accept="image/*" class="hidden">
+  <input type="file" id="reelsDosya" accept="image/*,video/*" class="hidden">
   <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
     <div class="w-full max-w-xs text-center">
       <div class="text-3xl font-black neon mb-1">VibeMatch</div>
@@ -211,6 +212,7 @@ const st = {
   tema: "koyu",
   kullanici: null,
   sarki: null,
+  reels: [],
   oturum: null,
   dil: "tr",
   engelli: [],
@@ -412,6 +414,10 @@ function akisHTML() {
         </button>`).join("")}
     </div>
 
+    <div class="flex gap-2 mb-3">
+      <button data-act="reelsAc" class="flex-1 py-2 rounded-full border border-white/20 text-sm">🎬 Reels</button>
+      <button data-act="reelsEkle" class="flex-1 py-2 rounded-full border border-white/20 text-sm">➕ Foto / video ekle</button>
+    </div>
     <div class="rounded-2xl bg-white/5 border border-white/10 p-3 mb-4">
       <textarea id="gonderiMetin" rows="2" maxlength="180" placeholder="Bugün Eskişehir&#39;de ne oluyor?" class="w-full bg-transparent outline-none text-sm resize-none"></textarea>
       <input type="file" id="gonderiDosya" accept="image/*" class="hidden">
@@ -1670,6 +1676,14 @@ document.addEventListener('change', e => {
   e.target.value = '';
 });
 
+/* Reels dosyası seçimi */
+document.addEventListener('change', e => {
+  if (e.target.id !== 'reelsDosya') return;
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) reelsDosyaIsle(f);
+});
+
 /* Profil fotoğrafı: galeriden seçilir, 400px kare olarak küçültülüp saklanır */
 document.addEventListener('change', e => {
   if (e.target.id !== 'profilDosya') return;
@@ -1854,6 +1868,38 @@ function sarkiKaydet() {
   } catch (err) {}
 }
 
+/* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
+function reelsAc() {
+  const liste = st.reels;
+  const icerik = liste.length
+    ? liste.map(r => `
+        <section class="h-full snap-start relative bg-black flex items-center justify-center overflow-hidden">
+          ${r.tip === "video"
+            ? `<video src="${r.url}" controls playsinline loop class="max-h-full w-full object-contain"></video>`
+            : `<img src="${r.url}" class="max-h-full w-full object-contain">`}
+          ${r.metin ? `<div class="absolute bottom-6 left-4 right-16 text-sm font-semibold drop-shadow">${esc(r.metin)}</div>` : ""}
+          <div class="absolute bottom-6 right-4 text-xs text-slate-300">${esc(r.yazar)}</div>
+        </section>`).join("")
+    : `<div class="h-full flex items-center justify-center text-center text-slate-400 p-6">Henüz reels yok.<br>➕ ile foto veya video ekleyin.</div>`;
+  modalAc(`
+    <div class="h-full bg-black relative">
+      <button data-act="modalKapat" class="absolute top-3 left-3 z-10 px-3 py-1 rounded-full bg-black/60 text-sm">✕ Kapat</button>
+      <button data-act="reelsEkle" class="absolute top-3 right-3 z-10 px-3 py-1 rounded-full bg-cyan-400 text-black text-sm font-bold">➕ Ekle</button>
+      <div class="h-full overflow-y-auto snap-y snap-mandatory">${icerik}</div>
+    </div>`);
+}
+
+function reelsDosyaIsle(f) {
+  const max = 40 * 1024 * 1024;
+  if (f.size > max) { toast("Dosya çok büyük (en fazla 40 MB)"); return; }
+  const tip = f.type.indexOf("video") === 0 ? "video" : "image";
+  const girdi = document.getElementById("gonderiMetin");
+  const metin = girdi ? girdi.value.trim().slice(0, 150) : "";
+  st.reels.unshift({tip, url: URL.createObjectURL(f), metin, yazar: "Sen"});
+  toast("Reels'e eklendi 🎬 (bu cihazda)");
+  reelsAc();
+}
+
 /* ---------- Ayarlar paneli ---------- */
 function ayarlarAc() {
   modalAc(`
@@ -2021,6 +2067,8 @@ document.addEventListener('click', e => {
       break;
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
+    case 'reelsAc': reelsAc(); break;
+    case 'reelsEkle': $('#reelsDosya').click(); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
