@@ -179,7 +179,7 @@ const KISILER = [
   {id:8, ad:'Emre',   yas:22, sehir:'İstanbul', bolum:'Hukuk · 4. sınıf',    bio:'Vapurda müzik, Kadıköy\'de kahve.',              ilgi:['Müzik','Kahve','Spor'],     vibe:'☕ Sakin',     not:'Vapurdayım 🚢',                grad:GRAD[3], sarki:2, puan:590}
 ];
 
-const kisi = id => KISILER.find(p => p.id == id);
+const kisi = id => KISILER.find(p => p.id == id) || (st.dbProfiller[id] || null);
 const ortakIlgi = p => p.ilgi.filter(i => BEN.ilgi.includes(i));
 const skor = p => (p.sehir === ESK ? 50 : 0) + ortakIlgi(p).length * 12 + Math.random() * 10;
 
@@ -219,6 +219,8 @@ const st = {
   grupAcik: null,
   bildirimler: [],
   takipEdilen: [],
+  dbProfiller: {},
+  takipciSayi: 0,
   gizlilik: "herkes",
   kirpResim: null,
   oturum: null,
@@ -294,7 +296,7 @@ function kesfetHTML() {
   <div class="pt-1 giris">
     <div class="flex justify-between items-center mb-3 text-xs text-slate-400">
       <span>${st.sira + 1}/${st.deste.length}</span>
-      <span>Eskişehir öncelikli ✨</span>
+      <button data-act="aramaAc" class="px-3 py-1 rounded-full border border-white/20 text-xs">🔎 Kişi ara</button>
     </div>
     <div id="kart" class="relative h-[56vh] min-h-[360px] rounded-3xl overflow-hidden select-none touch-none cursor-grab shadow-2xl" style="background:${p.grad}">
       <div class="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none"></div>
@@ -1842,6 +1844,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
+  profilDbKaydet().then(takipVerileriYukle);
 }
 
 async function hesapGiris() {
@@ -1955,7 +1958,7 @@ function takipciSayisi(p) {
 }
 
 function takipciBen() {
-  return 0;
+  return st.takipciSayi || 0;
 }
 
 function profilGor(id) {
@@ -1982,13 +1985,34 @@ function profilGor(id) {
 }
 
 function takipToggle(id) {
+  const takipte = st.takipEdilen.some(x => String(x) === String(id));
+  if (sb && st.kullanici) {
+    if (takipte) await_takip_sil(id);
+    else await_takip_ekle(id);
+    return;
+  }
   const n = Number(id);
-  const var_ = st.takipEdilen.includes(n);
-  st.takipEdilen = var_ ? st.takipEdilen.filter(x => x !== n) : [...st.takipEdilen, n];
+  st.takipEdilen = takipte ? st.takipEdilen.filter(x => x !== n) : [...st.takipEdilen, n];
   takipKaydet();
-  toast(var_ ? "Takipten çıkıldı" : "Takip ediliyor ✅");
-  if (/Takip ettiklerin/.test(document.getElementById("modal").innerText)) takipListeAc("takip"); else profilGor(n);
+  toast(takipte ? "Takipten çıkıldı" : "Takip ediliyor ✅");
+  profilGor(id);
   render();
+}
+
+async function await_takip_ekle(id) {
+  const {error} = await sb.from("takipler").insert({takipci_id: st.kullanici.id, takip_edilen_id: id});
+  if (error) return toast("Takip edilemedi: " + error.message);
+  toast("Takip ediliyor ✅");
+  await takipVerileriYukle();
+  profilGor(id);
+}
+
+async function await_takip_sil(id) {
+  const {error} = await sb.from("takipler").delete().eq("takipci_id", st.kullanici.id).eq("takip_edilen_id", id);
+  if (error) return toast("Takipten çıkılamadı: " + error.message);
+  toast("Takipten çıkıldı");
+  await takipVerileriYukle();
+  profilGor(id);
 }
 
 /* ---------- Takip listeleri ---------- */
@@ -2208,6 +2232,63 @@ function grupGonder(id) {
   if (yeni) yeni.focus();
 }
 
+/* ---------- Gerçek kullanıcılar (veritabanı) ---------- */
+function dbGrad(id) {
+  let h = 0;
+  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) % GRAD.length;
+  return GRAD[h];
+}
+
+async function profilDbKaydet() {
+  if (!sb || !st.kullanici) return;
+  const {error} = await sb.from("profiles").upsert({
+    id: st.kullanici.id, ad: BEN.ad, yas: BEN.yas, bio: BEN.bio || "",
+    sehir: BEN.sehir, bolum: BEN.bolum, updated_at: new Date().toISOString(),
+  });
+  if (error) console.warn("profil kaydedilemedi", error.message);
+}
+
+async function takipVerileriYukle() {
+  if (!sb || !st.kullanici) return;
+  const benim = st.kullanici.id;
+  const {data} = await sb.from("takipler").select("takip_edilen_id").eq("takipci_id", benim);
+  st.takipEdilen = (data || []).map(r => r.takip_edilen_id);
+  const {count} = await sb.from("takipler").select("*", {count: "exact", head: true}).eq("takip_edilen_id", benim);
+  st.takipciSayi = count || 0;
+  render();
+}
+
+function aramaAc() {
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black">Kişi ara</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <input id="aramaGiris" maxlength="30" placeholder="İsim yaz (en az 2 harf)" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+      <button data-act="aramaYap" class="w-full mt-3 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Ara</button>
+      <div id="aramaSonuc" class="space-y-2 mt-4"></div>
+    </div>`);
+  setTimeout(() => { const g = document.getElementById("aramaGiris"); if (g) g.focus(); }, 50);
+}
+
+async function aramaYap() {
+  const q = document.getElementById("aramaGiris").value.trim();
+  const kutu = document.getElementById("aramaSonuc");
+  if (!sb) { kutu.innerHTML = '<p class="text-xs text-slate-400">Arama için sunucu bağlantısı gerekir.</p>'; return; }
+  if (q.length < 2) { kutu.innerHTML = '<p class="text-xs text-slate-400">En az 2 harf yazın.</p>'; return; }
+  const benimId = st.kullanici ? st.kullanici.id : "00000000-0000-0000-0000-000000000000";
+  const {data, error} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio").ilike("ad", "%" + q + "%").neq("id", benimId).limit(20);
+  if (error) { kutu.innerHTML = `<p class="text-xs text-rose-400">${esc(error.message)}</p>`; return; }
+  if (!data || !data.length) { kutu.innerHTML = '<p class="text-xs text-slate-400">Kimse bulunamadı.</p>'; return; }
+  data.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
+  kutu.innerHTML = data.map(p => `
+    <button data-act="profilGor" data-id="${p.id}" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-left">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(p.id)}">${esc((p.ad || "?")[0])}</div>
+      <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.ad)}${p.yas ? ", " + p.yas : ""}</div><div class="text-[11px] text-slate-400 truncate">${esc(p.sehir || "")} · ${esc(p.bolum || "")}</div></div>
+    </button>`).join("");
+}
+
 /* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
 const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
 
@@ -2377,6 +2458,7 @@ async function ayarKaydet() {
   if (st.kullanici) st.kullanici.ad = ad;
   modalKapat();
   toast(sifre ? "Bilgilerin ve şifren güncellendi ✅" : "Bilgilerin güncellendi ✅");
+  profilDbKaydet();
   render();
 }
 
@@ -2486,6 +2568,8 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'aramaAc': aramaAc(); break;
+    case 'aramaYap': aramaYap(); break;
     case 'kameraAc': $('#kameraDosya').click(); break;
     case 'profilGor': profilGor(d.id); break;
     case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
