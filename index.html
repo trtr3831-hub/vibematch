@@ -1530,6 +1530,7 @@ function render() {
   uygulaDil();
   cevirDOM(g);
   if (st.sekme === 'kesfet') kartBaglan();
+  if (st.sekme === 'ara') kesfetYukle();
   if (st.sekme === 'mesajlar' && st.sohbetId != null) g.scrollTop = g.scrollHeight;
 }
 
@@ -2283,7 +2284,7 @@ async function aramaYap() {
   if (!data || !data.length) { kutu.innerHTML = '<p class="text-xs text-slate-400">Kimse bulunamadı.</p>'; return; }
   data.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
   kutu.innerHTML = data.map(p => `
-    <button data-act="profilGor" data-id="${p.id}" class="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-left">
+    <button data-act="profilGor" data-id="${p.id}" class="w-full flex items-center gap-3 py-2.5 border-b border-white/10 text-left">
       <div class="w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(p.id)}">${esc((p.ad || "?")[0])}</div>
       <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.ad)}${p.yas ? ", " + p.yas : ""}</div><div class="text-[11px] text-slate-400 truncate">${esc(p.sehir || "")} · ${esc(p.bolum || "")}</div></div>
     </button>`).join("");
@@ -2292,13 +2293,43 @@ async function aramaYap() {
 /* ---------- Ara sekmesi ---------- */
 function araHTML() {
   return `
-  <div class="giris space-y-3 pt-2">
-    <h2 class="text-xl font-black">Kişi ara</h2>
-    <input id="aramaGiris" maxlength="30" placeholder="Arkadaşının adını yaz (en az 2 harf)" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-    <button data-act="aramaYap" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Ara</button>
-    <div id="aramaSonuc" class="space-y-2"></div>
+  <div class="giris pt-2">
+    <div class="sticky top-0 bg-[#0d0818] pb-3 z-10">
+      <div class="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2.5">
+        <span class="text-slate-400 text-sm">🔎</span>
+        <input id="aramaGiris" maxlength="30" placeholder="Ara" class="flex-1 bg-transparent outline-none text-sm">
+      </div>
+    </div>
+    <div id="aramaSonuc"><p class="text-center text-xs text-slate-500 py-8">Yükleniyor…</p></div>
   </div>`;
 }
+
+/* Yeni kullanıcıların keşif ızgarası */
+async function kesfetYukle() {
+  const kutu = document.getElementById("aramaSonuc");
+  if (!kutu) return;
+  if (!sb) { kutu.innerHTML = '<p class="text-center text-xs text-slate-500 py-8">Sunucu bağlantısı yok.</p>'; return; }
+  const benimId = st.kullanici ? st.kullanici.id : "00000000-0000-0000-0000-000000000000";
+  const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio").neq("id", benimId).order("updated_at", {ascending: false}).limit(24);
+  if (!document.getElementById("aramaSonuc")) return;
+  if (!data || !data.length) { kutu.innerHTML = '<p class="text-center text-xs text-slate-500 py-8">Henüz başka kullanıcı yok.</p>'; return; }
+  data.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
+  kutu.innerHTML = '<div class="grid grid-cols-3 gap-1">' + data.map(p => `
+    <button data-act="profilGor" data-id="${p.id}" class="aspect-square rounded-lg flex flex-col items-center justify-center p-2 text-center" style="background:${dbGrad(p.id)}">
+      <span class="text-2xl font-black">${esc((p.ad || "?")[0])}</span>
+      <span class="text-[11px] font-semibold truncate w-full mt-1">${esc(p.ad)}</span>
+    </button>`).join("") + "</div>";
+}
+
+let aramaZamanlayici = null;
+document.addEventListener("input", e => {
+  if (e.target.id !== "aramaGiris") return;
+  clearTimeout(aramaZamanlayici);
+  aramaZamanlayici = setTimeout(() => {
+    const q = e.target.value.trim();
+    if (q.length >= 2) aramaYap(); else kesfetYukle();
+  }, 350);
+});
 
 /* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
 const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
