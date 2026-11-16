@@ -376,29 +376,33 @@ function yorumGonder(id) {
 
 function gonderiHTML(g) {
   const yorumSayisi = (g.yorumlar || []).length;
+  const avatar = g.benim && st.benFoto
+    ? `<img src="${st.benFoto}" class="w-8 h-8 rounded-full object-cover">`
+    : `<div class="w-8 h-8 rounded-full" style="background:${g.grad}"></div>`;
   const medya = g.foto
-    ? `<img src="${g.foto}" class="w-full max-h-[420px] object-cover">`
-    : `<div class="mx-4 mb-3 rounded-xl p-5 min-h-[130px] flex items-end text-lg font-semibold" style="background:${g.grad}">${esc(g.metin)}</div>`;
-  const metin = g.foto && g.metin ? `<div class="px-4 py-3 text-sm">${esc(g.metin)}</div>` : "";
-  const begeniDugmesi = g.benim
-    ? `<span class="text-slate-300">❤️ ${g.begeni}</span>`
-    : `<button data-act="begeniGonderi" data-id="${g.id}" class="flex items-center gap-1 ${g.begendim ? "text-pink-400" : "text-slate-300"}">${g.begendim ? "❤️" : "🤍"} ${g.begeni}</button>`;
+    ? `<img src="${g.foto}" class="w-full aspect-square object-cover">`
+    : `<div class="w-full aspect-square flex items-center justify-center p-6 text-center text-xl font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
+  const aciklama = g.foto && g.metin ? `<p class="px-1 text-sm"><span class="font-semibold">${esc(g.yazar)}</span> ${esc(g.metin)}</p>` : "";
+  const kalp = g.benim
+    ? `<span class="text-xl">❤️</span>`
+    : `<button data-act="begeniGonderi" data-id="${g.id}" class="text-xl" aria-label="Beğen">${g.begendim ? "❤️" : "🤍"}</button>`;
   return `
-      <article class="rounded-2xl bg-white/5 border border-white/10 mb-5 overflow-hidden giris">
-        <div class="flex items-center gap-3 px-4 py-3">
-          ${g.benim && st.benFoto ? `<img src="${st.benFoto}" class="w-9 h-9 rounded-full object-cover">` : `<div class="w-9 h-9 rounded-full" style="background:${g.grad}"></div>`}
-          <div>
-            <div class="font-semibold text-sm">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
+      <article class="mb-6 giris">
+        <header class="flex items-center gap-2 px-1 pb-2">
+          ${avatar}
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold truncate">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
             <div class="text-[11px] text-slate-400">${esc(g.sehir)} · ${esc(g.zaman)}</div>
           </div>
+        </header>
+        <div class="rounded-xl overflow-hidden">${medya}</div>
+        <div class="flex items-center gap-4 px-1 pt-2">
+          ${kalp}
+          <button data-act="yorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
         </div>
-        ${medya}
-        ${metin}
-        <div class="flex items-center gap-5 px-4 pb-3 pt-2 text-sm font-semibold">
-          ${begeniDugmesi}
-          <button data-act="yorumAc" data-id="${g.id}" class="flex items-center gap-1 text-slate-300">💬 ${yorumSayisi}</button>
-          ${g.benim ? "" : `<button data-act="sikayetAc" data-tur="gonderi" data-ad="${esc(g.yazar)}" class="ml-auto text-xs text-slate-400">🚩 Bildir</button>`}
-        </div>
+        <p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>
+        ${aciklama}
+        <button data-act="yorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${yorumSayisi ? yorumSayisi + " yorumun tümünü gör" : "Yorum yaz"}</button>
         ${yorumlarHTML(g)}
       </article>`;
 }
