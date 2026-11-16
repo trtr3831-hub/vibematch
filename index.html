@@ -378,14 +378,14 @@ function gonderiHTML(g) {
   const yorumSayisi = (g.yorumlar || []).length;
   const medya = g.foto
     ? `<img src="${g.foto}" class="w-full max-h-[420px] object-cover">`
-    : `<div class="mx-3 mb-3 rounded-xl p-5 min-h-[130px] flex items-end text-lg font-semibold" style="background:${g.grad}">${esc(g.metin)}</div>`;
+    : `<div class="mx-4 mb-3 rounded-xl p-5 min-h-[130px] flex items-end text-lg font-semibold" style="background:${g.grad}">${esc(g.metin)}</div>`;
   const metin = g.foto && g.metin ? `<div class="px-4 py-3 text-sm">${esc(g.metin)}</div>` : "";
   const begeniDugmesi = g.benim
     ? `<span class="text-slate-300">❤️ ${g.begeni}</span>`
     : `<button data-act="begeniGonderi" data-id="${g.id}" class="flex items-center gap-1 ${g.begendim ? "text-pink-400" : "text-slate-300"}">${g.begendim ? "❤️" : "🤍"} ${g.begeni}</button>`;
   return `
-      <article class="rounded-2xl bg-white/5 border border-white/10 mb-4 overflow-hidden giris">
-        <div class="flex items-center gap-3 p-3">
+      <article class="rounded-2xl bg-white/5 border border-white/10 mb-5 overflow-hidden giris">
+        <div class="flex items-center gap-3 px-4 py-3">
           ${g.benim && st.benFoto ? `<img src="${st.benFoto}" class="w-9 h-9 rounded-full object-cover">` : `<div class="w-9 h-9 rounded-full" style="background:${g.grad}"></div>`}
           <div>
             <div class="font-semibold text-sm">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
@@ -394,7 +394,7 @@ function gonderiHTML(g) {
         </div>
         ${medya}
         ${metin}
-        <div class="flex items-center gap-4 px-4 pb-3 pt-2 text-sm">
+        <div class="flex items-center gap-5 px-4 pb-3 pt-2 text-sm font-semibold">
           ${begeniDugmesi}
           <button data-act="yorumAc" data-id="${g.id}" class="flex items-center gap-1 text-slate-300">💬 ${yorumSayisi}</button>
           ${g.benim ? "" : `<button data-act="sikayetAc" data-tur="gonderi" data-ad="${esc(g.yazar)}" class="ml-auto text-xs text-slate-400">🚩 Bildir</button>`}
