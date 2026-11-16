@@ -228,6 +228,8 @@ const st = {
   dbAcikYorum: null,
   dbReeller: [],
   bekleyenSes: null,
+  arsiv: [],
+  oneCikanlar: [],
   dbMesajlar: [],
   gizlilik: "herkes",
   kirpResim: null,
@@ -676,12 +678,7 @@ function profilHTML() {
       <button data-act="profilPaylas" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili paylaş</button>
     </div>
 
-    <div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">
-      <button data-act="reelsEkle" class="flex flex-col items-center gap-1 shrink-0">
-        <span class="w-14 h-14 rounded-full border border-dashed border-white/30 flex items-center justify-center text-xl">+</span>
-        <span class="text-[10px] text-slate-400">Yeni</span>
-      </button>
-    </div>
+    ${oneCikanHTML()}
 
     <div class="text-[11px] text-slate-500 mt-2">${st.gizlilik === "takipci" ? "🔒 Yalnızca takipçilere açık" : "🌐 Herkese açık"} · 🏆 ${puanHesapla()} puan · 💗 ${toplamBegeni} beğeni</div>
     <div class="text-[11px] mt-1"><button data-act="profilFoto" class="text-cyan-300 underline">📷 Fotoğraf değiştir</button>${st.kullanici ? ` · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button>` : ""}</div>
@@ -1659,6 +1656,8 @@ $('#hikayeDosya').addEventListener('change', e => {
   const r = new FileReader();
   r.onload = () => {
     st.benHikayeler.push({foto: r.result, t: Date.now()});
+    st.arsiv.unshift({foto: r.result, t: Date.now()});
+    arsivKaydet();
     st.benHikayeSayi++;
     toast('Hikayen yayında! +15 puan 🎉');
     render();
@@ -1753,6 +1752,90 @@ function olustur(tur) {
     return;
   }
   if (tur === "hikaye") { $("#hikayeDosya").click(); }
+}
+
+/* ---------- Hikaye arşivi ve öne çıkanlar (bu cihazda) ---------- */
+function arsivKaydet() {
+  try {
+    localStorage.setItem("vm_arsiv", JSON.stringify(st.arsiv.slice(0, 12)));
+    localStorage.setItem("vm_one", JSON.stringify(st.oneCikanlar.slice(0, 10)));
+  } catch (err) {}
+}
+
+function oneCikanHTML() {
+  const cikanlar = st.oneCikanlar.map((h, i) => `
+    <button data-act="oneCikanAc" data-i="${i}" class="flex flex-col items-center gap-1 shrink-0">
+      <span class="w-14 h-14 rounded-full overflow-hidden border border-white/20"><img src="${h.foto}" class="w-full h-full object-cover"></span>
+      <span class="text-[10px] text-slate-400 w-14 truncate text-center">${esc(h.ad || "Öne çıkan")}</span>
+    </button>`).join("");
+  return `<div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">
+    <button data-act="arsivAc" class="flex flex-col items-center gap-1 shrink-0">
+      <span class="w-14 h-14 rounded-full border border-dashed border-white/30 flex items-center justify-center text-xl">+</span>
+      <span class="text-[10px] text-slate-400">Arşiv</span>
+    </button>
+    ${cikanlar}
+  </div>`;
+}
+
+function arsivAc() {
+  const liste = st.arsiv;
+  const icerik = liste.length
+    ? `<div class="grid grid-cols-3 gap-1">${liste.map((h, i) => `
+         <button data-act="arsivSec" data-i="${i}" class="aspect-[9/16] overflow-hidden rounded-lg bg-white/5"><img src="${h.foto}" class="w-full h-full object-cover"></button>`).join("")}</div>
+       <p class="text-[11px] text-slate-500 mt-4 text-center">Bir hikayeye dokunup öne çıkarabilirsin.</p>`
+    : `<p class="text-center text-slate-400 py-10">Arşivde henüz hikaye yok. Hikaye paylaştıkça burada görünür.</p>`;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Hikaye arşivi</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      ${icerik}
+    </div>`);
+}
+
+function arsivSec(i) {
+  const h = st.arsiv[i];
+  if (!h) return;
+  const ekli = st.oneCikanlar.some(x => x.t === h.t);
+  modalAc(`
+    <div class="h-full bg-black flex flex-col items-center justify-center p-6 giris">
+      <img src="${h.foto}" class="max-h-[60%] rounded-2xl object-contain">
+      <div class="flex gap-2 mt-5 w-full max-w-xs">
+        <button data-act="arsivAc" class="flex-1 py-2.5 rounded-full border border-white/20 text-sm">Geri</button>
+        <button data-act="oneCikar" data-i="${i}" class="flex-1 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">${ekli ? "Öne çıkarıldı ✓" : "Öne çıkar"}</button>
+      </div>
+    </div>`);
+}
+
+function oneCikar(i) {
+  const h = st.arsiv[i];
+  if (!h) return;
+  if (st.oneCikanlar.some(x => x.t === h.t)) { toast("Zaten öne çıkarılmış"); return; }
+  if (st.oneCikanlar.length >= 10) { toast("En fazla 10 öne çıkan olabilir"); return; }
+  st.oneCikanlar.push({foto: h.foto, t: h.t, ad: "Öne çıkan"});
+  arsivKaydet();
+  toast("Öne çıkanlara eklendi ⭐");
+  render();
+}
+
+function oneCikanAc(i) {
+  const h = st.oneCikanlar[i];
+  if (!h) return;
+  modalAc(`
+    <div class="h-full bg-black flex flex-col items-center justify-center p-6 giris">
+      <img src="${h.foto}" class="max-h-[60%] rounded-2xl object-contain">
+      <button data-act="oneCikarKaldir" data-i="${i}" class="mt-5 px-5 py-2.5 rounded-full border border-rose-400 text-rose-300 text-sm">Öne çıkanlardan kaldır</button>
+      <button data-act="modalKapat" class="mt-3 text-sm text-slate-400">Kapat</button>
+    </div>`);
+}
+
+function oneCikarKaldir(i) {
+  st.oneCikanlar.splice(i, 1);
+  arsivKaydet();
+  modalKapat();
+  toast("Öne çıkanlardan kaldırıldı");
+  render();
 }
 
 /* Gönderi için şarkı dosyası seçimi */
@@ -2994,6 +3077,11 @@ document.addEventListener('click', e => {
     case 'sesSec': $('#sesDosya').click(); break;
     case 'olusturAc': olusturAc(); break;
     case 'olustur': olustur(d.tur); break;
+    case 'arsivAc': arsivAc(); break;
+    case 'arsivSec': arsivSec(+d.i); break;
+    case 'oneCikar': oneCikar(+d.i); break;
+    case 'oneCikanAc': oneCikanAc(+d.i); break;
+    case 'oneCikarKaldir': oneCikarKaldir(+d.i); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
@@ -3019,6 +3107,7 @@ try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
 try { st.takipEdilen = JSON.parse(localStorage.getItem('vm_takip') || '[]') || []; } catch (err) {}
 try { st.gizlilik = localStorage.getItem('vm_gizlilik') === 'takipci' ? 'takipci' : st.gizlilik; } catch (err) {}
 try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
+try { st.arsiv = JSON.parse(localStorage.getItem('vm_arsiv') || '[]') || []; st.oneCikanlar = JSON.parse(localStorage.getItem('vm_one') || '[]') || []; } catch (err) {}
 try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
 try { st.tema = localStorage.getItem('vm_tema') === 'acik' ? 'acik' : 'koyu'; } catch (err) {}
