@@ -544,6 +544,11 @@ function sohbetHTML(id) {
     </div>
     <div class="flex justify-end gap-4 text-xs py-1"><button data-act="sikayetAc" data-tur="kisi" data-id="${id}" data-ad="${esc(p.ad)}" class="text-slate-400">🚩 Şikayet et</button><button data-act="engelleAc" data-id="${id}" class="text-slate-400">🚫 Engelle</button></div>
     <div class="flex-1 space-y-2 py-3">${m.map((x, i) => balon(x, i, id)).join('')}</div>
+    <div class="flex gap-2 mb-2">
+      <button data-act="aiTanisma" data-id="${id}" class="flex-1 py-1.5 rounded-full border border-white/20 text-xs">✨ İlk mesaj önerisi</button>
+      <button data-act="aiDuzelt" data-id="${id}" class="flex-1 py-1.5 rounded-full border border-white/20 text-xs">✨ Mesajımı düzelt</button>
+    </div>
+    <div id="aiKutu" class="space-y-1 mb-2"></div>
     <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
       <button data-act="sohbetFotoSec" class="px-3 rounded-full border border-white/20 text-sm">📷</button>
       <input type="file" id="sohbetDosya" accept="image/*" class="hidden">
@@ -1763,6 +1768,7 @@ function oturumAc(user) {
   st.kullanici = {id: user.id, email: user.email, ad};
   BEN.ad = ad;
   BEN.yas = (user.user_metadata && user.user_metadata.yas) || BEN.yas;
+  BEN.bio = (user.user_metadata && user.user_metadata.bio) || BEN.bio;
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
@@ -1868,6 +1874,67 @@ function sarkiKaydet() {
   } catch (err) {}
 }
 
+/* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
+const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
+
+async function aiIste(gorev, istem) {
+  const r = await fetch(AI_URL, {
+    method: "POST",
+    headers: {"content-type": "application/json"},
+    body: JSON.stringify({gorev, istem}),
+  });
+  const veri = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(veri.hata || "Yapay zekâ şu an yanıt vermiyor.");
+  return veri.metin || "";
+}
+
+function aiKutuYaz(satirlar, hedefInput) {
+  const kutu = document.getElementById("aiKutu");
+  if (!kutu) return;
+  if (!satirlar.length) { kutu.innerHTML = ""; return; }
+  kutu.innerHTML = satirlar.map((s, i) =>
+    `<button data-act="aiSec" data-i="${i}" class="w-full text-left text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10">${esc(s)}</button>`
+  ).join("");
+  kutu.dataset.hedef = hedefInput || "mesajGiris";
+  kutu._satirlar = satirlar;
+}
+
+function aiSatirTemizle(s) {
+  return s.replace(/^\s*(\d+[.)]|Nazik:|Eğlenceli:|-)\s*/i, "").trim();
+}
+
+async function aiTanisma(id) {
+  const p = kisi(id);
+  if (!p) return;
+  const istem = `Eşleştiğim kişi: ${p.ad}, ${p.yas} yaşında, ${p.bolum}. Açıklaması: "${p.bio}". İlgi alanları: ${p.ilgi.join(", ")}. Benim ilgi alanlarım: ${BEN.ilgi.join(", ")}. Bu kişiye ilk mesaj önerileri ver.`;
+  toast("Öneriler hazırlanıyor ✨");
+  try {
+    const metin = await aiIste("tanisma", istem);
+    aiKutuYaz(metin.split("\n").map(aiSatirTemizle).filter(Boolean), "mesajGiris");
+  } catch (err) { toast(err.message || "Bir hata oldu"); }
+}
+
+async function aiDuzelt() {
+  const inp = document.getElementById("mesajGiris");
+  const t = inp ? inp.value.trim() : "";
+  if (!t) { toast("Önce bir mesaj yaz ✍️"); return; }
+  toast("Düzeltiliyor ✨");
+  try {
+    const metin = await aiIste("duzelt", t);
+    aiKutuYaz(metin.split("\n").map(aiSatirTemizle).filter(Boolean), "mesajGiris");
+  } catch (err) { toast(err.message || "Bir hata oldu"); }
+}
+
+async function aiBio() {
+  const istem = `Adım ${BEN.ad}, ${BEN.yas} yaşındayım, ${BEN.bolum}. İlgi alanlarım: ${BEN.ilgi.join(", ")}. Bu bilgilerle kısa bir profil açıklaması yaz.`;
+  toast("Bio hazırlanıyor ✨");
+  try {
+    const metin = await aiIste("bio", istem);
+    const alan = document.getElementById("ayarBio");
+    if (alan) alan.value = metin.slice(0, 120);
+  } catch (err) { toast(err.message || "Bir hata oldu"); }
+}
+
 /* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
 function reelsAc() {
   const liste = st.reels;
@@ -1914,6 +1981,11 @@ function ayarlarAc() {
           <input id="ayarAd" maxlength="30" value="${esc(BEN.ad)}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
         </div>
         <div>
+          <label class="text-xs text-slate-400">Kısa açıklama (bio)</label>
+          <textarea id="ayarBio" maxlength="120" rows="2" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
+          <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
+        </div>
+        <div>
           <label class="text-xs text-slate-400">Yaş</label>
           <input id="ayarYas" type="number" min="18" max="99" value="${BEN.yas}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
         </div>
@@ -1938,6 +2010,7 @@ function ayarMesaj(t, hata) {
 async function ayarKaydet() {
   const ad = document.getElementById("ayarAd").value.trim();
   const yas = parseInt(document.getElementById("ayarYas").value, 10);
+  const bio = document.getElementById("ayarBio").value.trim().slice(0, 120);
   const sifre = document.getElementById("ayarSifre").value;
   const sifre2 = document.getElementById("ayarSifre2").value;
   if (!ad) return ayarMesaj("Adınızı yazın.", true);
@@ -1947,7 +2020,7 @@ async function ayarKaydet() {
     if (sifre !== sifre2) return ayarMesaj("Şifreler birbiriyle aynı değil.", true);
   }
   if (sb && st.kullanici) {
-    const {error} = await sb.auth.updateUser({data: {ad, yas}});
+    const {error} = await sb.auth.updateUser({data: {ad, yas, bio}});
     if (error) return ayarMesaj(hataMetni(error), true);
     if (sifre) {
       const r = await sb.auth.updateUser({password: sifre});
@@ -1956,6 +2029,7 @@ async function ayarKaydet() {
   }
   BEN.ad = ad;
   BEN.yas = yas;
+  BEN.bio = bio;
   if (st.kullanici) st.kullanici.ad = ad;
   modalKapat();
   toast(sifre ? "Bilgilerin ve şifren güncellendi ✅" : "Bilgilerin güncellendi ✅");
@@ -2068,6 +2142,16 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'aiTanisma': aiTanisma(d.id); break;
+    case 'aiDuzelt': aiDuzelt(); break;
+    case 'aiBio': aiBio(); break;
+    case 'aiSec': {
+      const kutu = document.getElementById('aiKutu');
+      const satir = kutu && kutu._satirlar ? kutu._satirlar[+d.i] : '';
+      const hedef = document.getElementById(kutu && kutu.dataset.hedef === 'ayarBio' ? 'ayarBio' : 'mesajGiris');
+      if (hedef && satir) { hedef.value = satir; hedef.focus(); }
+      break;
+    }
     case 'reelsEkle': $('#reelsDosya').click(); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
