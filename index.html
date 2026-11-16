@@ -588,6 +588,10 @@ function mesajHTML() {
   if (!aktifEslesmeler().length) return `<div class="text-center text-slate-400 py-20">Henüz eşleşmen yok. Keşfet sekmesinde kaydır! 💗</div>`;
   return grupBolumu + `
   <div class="giris">
+    <div class="flex gap-4 overflow-x-auto kaydir pt-3 pb-4 mb-2 border-b border-white/10">
+      ${notRozetHTML()}
+      ${st.eslesmeler.map(id => { const p = kisi(id); return p && p.not ? `<div class="flex flex-col items-center gap-1 w-20 shrink-0"><div class="relative w-16 h-16 rounded-full flex items-center justify-center font-black" style="background:${p.grad}">${esc(p.ad[0])}<span class="absolute -top-3 left-1/2 -translate-x-1/2 max-w-[90px] truncate bg-white text-black text-[10px] px-2 py-1 rounded-xl">${esc(p.not)}</span></div><span class="text-[11px] text-slate-300 truncate w-full text-center">${esc(p.ad)}</span></div>` : ""; }).join("")}
+    </div>
     <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Eşleşmeler</h3>
     <div class="kaydir overflow-x-auto flex gap-4 mb-5 -mx-4 px-4">
       ${aktifEslesmeler().map(id => {
@@ -1845,7 +1849,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
-  profilDbKaydet().then(takipVerileriYukle);
+  profilDbKaydet().then(takipVerileriYukle).then(notYukle);
 }
 
 async function hesapGiris() {
@@ -2304,6 +2308,35 @@ function araHTML() {
   </div>`;
 }
 
+/* Sen için not baloncuğu (Mesajlar üstünde) */
+function notRozetHTML() {
+  const n = notGetir();
+  return `<button data-act="notDuzenle" class="flex flex-col items-center gap-1 w-20 shrink-0">
+    <div class="relative w-16 h-16 rounded-full flex items-center justify-center font-black" style="background:${BEN.grad}">
+      ${esc((BEN.ad || "S")[0])}
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 max-w-[90px] truncate text-[10px] px-2 py-1 rounded-xl ${n ? "bg-white text-black" : "bg-white/10 text-slate-300"}">${n ? esc(n.metin) : "Not ekle"}</span>
+    </div>
+    <span class="text-[11px] text-slate-300">Sen</span>
+  </button>`;
+}
+
+function notDuzenle() {
+  st.sekme = "profil";
+  render();
+  setTimeout(() => { const g = document.getElementById("notGiris"); if (g) g.focus(); }, 60);
+}
+
+/* Kendi notunu sunucudan yükle (24 saat içindeyse) */
+async function notYukle() {
+  if (!sb || !st.kullanici) return;
+  const {data} = await sb.from("profiles").select("not_metin,not_zaman").eq("id", st.kullanici.id).maybeSingle();
+  if (data && data.not_metin && data.not_zaman) {
+    const t = Date.parse(data.not_zaman);
+    if (Date.now() - t < 864e5) st.not = {metin: data.not_metin, t};
+  }
+  render();
+}
+
 /* Yeni kullanıcıların keşif ızgarası */
 async function kesfetYukle() {
   const kutu = document.getElementById("aramaSonuc");
@@ -2570,6 +2603,7 @@ document.addEventListener('click', e => {
       const v = $('#notGiris').value.trim();
       if (!v) { toast('Bir not yaz 📝'); break; }
       st.not = {metin: v.slice(0, 60), t: Date.now()};
+      if (sb && st.kullanici) sb.from("profiles").update({not_metin: st.not.metin, not_zaman: new Date().toISOString()}).eq("id", st.kullanici.id).then(() => {});
       try { localStorage.setItem('vm_not', JSON.stringify(st.not)); } catch (err) {}
       toast('Notun 24 saat görünecek 💬');
       render();
@@ -2624,6 +2658,7 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'notDuzenle': notDuzenle(); break;
     case 'reelBegen': {
       const r = st.reels[+d.i];
       if (r) { r.begendim = !r.begendim; r.begeni = (r.begeni || 0) + (r.begendim ? 1 : -1); reelsAc(); }
