@@ -97,7 +97,8 @@
 <div class="telefon" id="telefon">
   <header class="px-4 pt-4 pb-2 flex items-center justify-between">
     <div class="text-2xl font-black neon">VibeMatch</div>
-    <div class="flex items-center gap-2"><div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
+    <div class="flex items-center gap-2"><button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
+    <div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-4"></main>
@@ -215,6 +216,8 @@ const st = {
   reels: [],
   gruplar: [],
   grupAcik: null,
+  bildirimler: [],
+  kirpResim: null,
   oturum: null,
   dil: "tr",
   engelli: [],
@@ -1576,6 +1579,7 @@ function eslestirmeDene(p) {
   if (Math.random() < 0.45) {
     if (!st.eslesmeler.includes(p.id)) st.eslesmeler.push(p.id);
     st.sohbetler[p.id] = [{g:'them', t:'Selam! Sen de bu gece kahve modunda mısın? ☕', s:saat()}];
+    bildirimEkle(p.ad + ' ile eşleştin 💞');
     eslesmeModal(p);
   } else {
     toast(p.ad + ' için beğenini gönderdin 💗');
@@ -1711,6 +1715,8 @@ document.addEventListener('change', e => {
   if (!f) return;
   const r = new FileReader();
   r.onload = () => {
+    kirpAc(r.result);
+    return;
     const img = new Image();
     img.onload = () => {
       const boyut = 400;
@@ -1888,6 +1894,115 @@ function sarkiKaydet() {
     else localStorage.removeItem("vm_sarki");
   } catch (err) {}
 }
+
+/* ---------- Bildirimler (bu cihazda) ---------- */
+function bildirimKaydet() {
+  try { localStorage.setItem("vm_bildirim", JSON.stringify(st.bildirimler.slice(0, 50))); } catch (err) {}
+}
+
+function bildirimRozetGuncelle() {
+  const r = document.getElementById("bildirimRozet");
+  if (!r) return;
+  const okunmamis = st.bildirimler.filter(b => !b.okundu).length;
+  r.textContent = okunmamis;
+  r.classList.toggle("hidden", !okunmamis);
+}
+
+function bildirimEkle(metin) {
+  st.bildirimler.unshift({metin, s: saat(), okundu: false});
+  bildirimKaydet();
+  bildirimRozetGuncelle();
+}
+
+function bildirimAc() {
+  st.bildirimler.forEach(b => { b.okundu = true; });
+  bildirimKaydet();
+  bildirimRozetGuncelle();
+  const liste = st.bildirimler.length
+    ? st.bildirimler.map(b => `<div class="p-3 rounded-xl bg-white/5 border border-white/10 flex justify-between gap-3 text-sm"><span>${esc(b.metin)}</span><span class="text-[10px] text-slate-500 whitespace-nowrap">${b.s}</span></div>`).join("")
+    : `<p class="text-center text-slate-400 py-10">Henüz bildirim yok.</p>`;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Bildirimler</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <div class="space-y-2">${liste}</div>
+      ${st.bildirimler.length ? '<button data-act="bildirimTemizle" class="mt-4 w-full py-2 rounded-full border border-white/20 text-sm">Hepsini temizle</button>' : ""}
+      <p class="text-[11px] text-slate-500 text-center mt-4">Bildirimler şimdilik yalnızca bu cihazda görünür.</p>
+    </div>`);
+}
+
+/* ---------- Profil fotoğrafı kırpma ---------- */
+const KIRP_BOYUT = 300;
+
+function kirpCiz() {
+  const c = document.getElementById("kirpCanvas");
+  const img = st.kirpResim;
+  if (!c || !img) return;
+  const ctx = c.getContext("2d");
+  const zoom = parseFloat(document.getElementById("kirpZoom").value);
+  const kx = parseFloat(document.getElementById("kirpX").value);
+  const ky = parseFloat(document.getElementById("kirpY").value);
+  const taban = Math.max(KIRP_BOYUT / img.width, KIRP_BOYUT / img.height) * zoom;
+  const dw = img.width * taban, dh = img.height * taban;
+  const x = (KIRP_BOYUT - dw) / 2 + kx * Math.max(0, (dw - KIRP_BOYUT) / 2);
+  const y = (KIRP_BOYUT - dh) / 2 + ky * Math.max(0, (dh - KIRP_BOYUT) / 2);
+  ctx.clearRect(0, 0, KIRP_BOYUT, KIRP_BOYUT);
+  ctx.drawImage(img, x, y, dw, dh);
+}
+
+function kirpAc(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    st.kirpResim = img;
+    modalAc(`
+      <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-black">Fotoğrafı ayarla</h2>
+          <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        </div>
+        <div class="flex justify-center mb-4">
+          <canvas id="kirpCanvas" width="${KIRP_BOYUT}" height="${KIRP_BOYUT}" class="rounded-full border-2 border-cyan-400" style="width:${KIRP_BOYUT}px;max-width:100%;height:auto"></canvas>
+        </div>
+        <label class="text-xs text-slate-400">Yakınlaştırma</label>
+        <input id="kirpZoom" type="range" min="1" max="3" step="0.05" value="1" class="w-full mb-3">
+        <label class="text-xs text-slate-400">Yatay kaydırma</label>
+        <input id="kirpX" type="range" min="-1" max="1" step="0.02" value="0" class="w-full mb-3">
+        <label class="text-xs text-slate-400">Dikey kaydırma</label>
+        <input id="kirpY" type="range" min="-1" max="1" step="0.02" value="0" class="w-full mb-5">
+        <button data-act="kirpKaydet" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Profil fotoğrafı yap</button>
+      </div>`);
+    kirpCiz();
+  };
+  img.src = dataUrl;
+}
+
+function kirpKaydet() {
+  const img = st.kirpResim;
+  if (!img) return;
+  const c = document.createElement("canvas");
+  c.width = 400; c.height = 400;
+  const k = 400 / KIRP_BOYUT;
+  const zoom = parseFloat(document.getElementById("kirpZoom").value);
+  const kx = parseFloat(document.getElementById("kirpX").value);
+  const ky = parseFloat(document.getElementById("kirpY").value);
+  const taban = Math.max(KIRP_BOYUT / img.width, KIRP_BOYUT / img.height) * zoom;
+  const dw = img.width * taban * k, dh = img.height * taban * k;
+  const x = (400 - dw) / 2 + kx * Math.max(0, (dw - 400) / 2);
+  const y = (400 - dh) / 2 + ky * Math.max(0, (dh - 400) / 2);
+  c.getContext("2d").drawImage(img, x, y, dw, dh);
+  st.benFoto = c.toDataURL("image/jpeg", 0.85);
+  try { localStorage.setItem("vm_foto", st.benFoto); } catch (err) {}
+  st.kirpResim = null;
+  modalKapat();
+  toast("Profil fotoğrafın güncellendi 📸");
+  render();
+}
+
+document.addEventListener("input", e => {
+  if (e.target.id === "kirpZoom" || e.target.id === "kirpX" || e.target.id === "kirpY") kirpCiz();
+});
 
 /* ---------- Gruplar (yalnızca bu cihazda) ---------- */
 function grupKaydet() {
@@ -2237,6 +2352,9 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'bildirimAc': bildirimAc(); break;
+    case 'bildirimTemizle': st.bildirimler = []; bildirimKaydet(); bildirimRozetGuncelle(); modalKapat(); break;
+    case 'kirpKaydet': kirpKaydet(); break;
     case 'grupOlustur': grupOlustur(); break;
     case 'grupKaydet': grupKaydetIslem(); break;
     case 'grupAc': st.grupAcik = +d.id; render(); break;
@@ -2273,6 +2391,7 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Başlatma ---------- */
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
+try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
 try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
 try { st.tema = localStorage.getItem('vm_tema') === 'acik' ? 'acik' : 'koyu'; } catch (err) {}
@@ -2316,6 +2435,7 @@ setInterval(() => {
   const g = st.benGonderiler[Math.floor(Math.random() * st.benGonderiler.length)];
   g.begeni++;
   toast('💗 Bir gönderin beğenildi! +10 puan');
+  bildirimEkle('Bir gönderin beğenildi ❤️');
   if (st.sekme === 'liderlik' || st.sekme === 'profil') render();
   else $('#puanRozet').textContent = puanHesapla();
 }, 25000);
