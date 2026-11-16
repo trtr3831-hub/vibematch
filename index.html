@@ -98,7 +98,8 @@
 <div class="telefon" id="telefon">
   <header class="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-[#0d0818]/95 backdrop-blur">
     <div class="text-xl font-black neon">VibeMatch</div>
-    <div class="flex items-center gap-2"><button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
+    <div class="flex items-center gap-2"><button data-act="olusturAc" class="w-8 h-8 mr-2 rounded-full bg-white/10 border border-white/10 text-lg leading-none" aria-label="Oluştur">＋</button>
+    <button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
@@ -1719,6 +1720,39 @@ document.addEventListener('change', e => {
   e.target.value = '';
 });
 
+/* ---------- Oluştur menüsü ---------- */
+function olusturAc() {
+  const secenek = (tur, ikon, baslik, alt) => `
+    <button data-act="olustur" data-tur="${tur}" class="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
+      <span class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-cyan-400 flex items-center justify-center text-xl">${ikon}</span>
+      <span class="flex-1"><span class="block font-semibold">${baslik}</span><span class="block text-xs text-slate-400">${alt}</span></span>
+    </button>`;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Ne paylaşmak istersin?</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <div class="space-y-3">
+        ${secenek("reels", "🎬", "Reels", "Kısa video ya da fotoğraf, açıklama ve şarkıyla")}
+        ${secenek("gonderi", "📝", "Gönderi", "Akış'ta yazı ya da şarkıyla paylaş")}
+        ${secenek("hikaye", "⭕", "Hikaye", "24 saat görünen fotoğrafın")}
+      </div>
+    </div>`);
+}
+
+function olustur(tur) {
+  modalKapat();
+  if (tur === "reels") { reelFormAc(); return; }
+  if (tur === "gonderi") {
+    st.sekme = "akis";
+    render();
+    setTimeout(() => { const g = document.getElementById("gonderiMetin"); if (g) g.focus(); }, 80);
+    return;
+  }
+  if (tur === "hikaye") { $("#hikayeDosya").click(); }
+}
+
 /* Gönderi için şarkı dosyası seçimi */
 document.addEventListener('change', e => {
   if (e.target.id !== 'sesDosya') return;
@@ -2956,6 +2990,8 @@ document.addEventListener('click', e => {
     case 'reelFormDosyaSec': $('#reelsDosya').click(); break;
     case 'reelFormGonder': reelFormGonder(); break;
     case 'sesSec': $('#sesDosya').click(); break;
+    case 'olusturAc': olusturAc(); break;
+    case 'olustur': olustur(d.tur); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
