@@ -1509,6 +1509,8 @@ function render() {
   document.querySelectorAll('.sekme').forEach(b => b.setAttribute('aria-current', String(b.dataset.sekme === st.sekme)));
   $('#puanRozet').textContent = puanHesapla();
   rozetGuncelle();
+  const arti = document.querySelector('[data-act="olusturAc"]');
+  if (arti) arti.classList.toggle('hidden', !(st.sekme === 'akis' || st.sekme === 'profil'));
   const g = $('#gorunum');
   const gorunumler = {ara: araHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
   g.innerHTML = gorunumler[st.sekme]();
