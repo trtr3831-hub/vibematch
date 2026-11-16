@@ -1534,6 +1534,7 @@ function modalAc(html) {
 function modalKapat() {
   const m = $('#modal');
   m.innerHTML = '';
+  m.style.bottom = '';
   m.classList.add('hidden');
 }
 
@@ -2615,7 +2616,7 @@ function reelsAc() {
             <button data-act="reelKaydet" data-i="${i}" class="flex flex-col items-center text-2xl">${r.kaydedildi ? "🔖" : "📑"}<span class="text-[11px] mt-0.5">Kaydet</span></button>
             <button class="text-2xl" aria-label="Diğer">⋯</button>
           </div>
-          <div class="absolute left-4 right-20 bottom-8 text-white">
+          <div class="absolute left-4 right-20 bottom-4 text-white">
             <div class="flex items-center gap-2">
               <div class="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm" style="background:${BEN.grad}">${esc((kullanici[0] || "s").toUpperCase())}</div>
               <span class="font-semibold text-sm">@${esc(String(kullanici).toLowerCase().replace(/\s+/g, ""))}</span>
@@ -2637,6 +2638,7 @@ function reelsAc() {
       </div>
       <div class="h-full overflow-y-auto snap-y snap-mandatory">${icerik}</div>
     </div>`);
+  $('#modal').style.bottom = '84px';
 }
 
 function reelsDosyaIsle(f) {
