@@ -98,15 +98,15 @@
 <div class="telefon" id="telefon">
   <header class="px-4 pt-4 pb-2 flex items-center justify-between">
     <div class="text-2xl font-black neon">VibeMatch</div>
-    <div class="flex items-center gap-2"><button data-act="aramaAc" class="relative mr-2 text-lg" aria-label="Kişi ara">🔎</button>
-    <button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
+    <div class="flex items-center gap-2"><button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <div class="text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-4 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="kesfet" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔥</span><span data-i18n="nav_kesfet">Keşfet</span></button>
+    <button data-act="sekme" data-sekme="ara" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔎</span>Ara</button>
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
@@ -1526,7 +1526,7 @@ function render() {
   $('#puanRozet').textContent = puanHesapla();
   rozetGuncelle();
   const g = $('#gorunum');
-  const gorunumler = {kesfet: kesfetHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
+  const gorunumler = {ara: araHTML, kesfet: kesfetHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
   g.innerHTML = gorunumler[st.sekme]();
   uygulaDil();
   cevirDOM(g);
@@ -2290,6 +2290,17 @@ async function aramaYap() {
     </button>`).join("");
 }
 
+/* ---------- Ara sekmesi ---------- */
+function araHTML() {
+  return `
+  <div class="giris space-y-3 pt-2">
+    <h2 class="text-xl font-black">Kişi ara</h2>
+    <input id="aramaGiris" maxlength="30" placeholder="Arkadaşının adını yaz (en az 2 harf)" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+    <button data-act="aramaYap" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Ara</button>
+    <div id="aramaSonuc" class="space-y-2"></div>
+  </div>`;
+}
+
 /* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
 const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
 
@@ -2607,6 +2618,7 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'mesajGiris' && st.sohbetId != null) gonder(st.sohbetId);
   if (e.target.id && e.target.id.indexOf('yorum-') === 0) yorumGonder(e.target.id.slice(6));
   if (e.target.id === 'grupGiris' && st.grupAcik != null) grupGonder(st.grupAcik);
+  if (e.target.id === 'aramaGiris') aramaYap();
   if (e.target.id === 'notGiris') {
     const b = document.querySelector('[data-act="notKaydet"]');
     if (b) b.click();
