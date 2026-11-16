@@ -104,10 +104,9 @@
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-4 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="kesfet" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔥</span><span data-i18n="nav_kesfet">Keşfet</span></button>
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
-    <button data-act="sekme" data-sekme="liderlik" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🏆</span><span data-i18n="nav_liderlik">Liderlik</span></button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
   </nav>
@@ -836,6 +835,7 @@ function ayarlarHTML() {
   const girdi = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
   return `
   <div class="giris pb-6 space-y-6 pt-2">
+    <section>${liderHTML()}</section>
     <h2 class="text-2xl font-black neon">Ayarlar</h2>
 
     <section>
