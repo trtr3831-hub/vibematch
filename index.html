@@ -438,18 +438,6 @@ function akisHTML() {
           <span class="text-[11px] text-slate-300 w-16 truncate text-center">${h.benim ? "Hikayen" : esc(h.ad)}</span>
         </button>`).join("")}
     </div>
-    <div class="rounded-2xl bg-white/5 border border-white/10 p-3 mb-4">
-      <textarea id="gonderiMetin" rows="2" maxlength="180" placeholder="Bugün Eskişehir&#39;de ne oluyor?" class="w-full bg-transparent outline-none text-sm resize-none"></textarea>
-      <input type="file" id="gonderiDosya" accept="image/*" class="hidden">
-      <div class="flex justify-between items-center mt-2">
-        <div class="flex items-center gap-2">
-          <button data-act="sesSec" class="px-3 py-1.5 rounded-full border border-white/20 text-xs">${st.bekleyenSes ? "🎵 Şarkı seçildi ✓" : "🎵 Şarkı ekle"}</button>
-          <span class="text-[11px] text-slate-500">Beğeni aldıkça puan</span>
-        </div>
-        <button data-act="paylas" class="px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-sm font-bold">Paylaş</button>
-      </div>
-    </div>
-
     ${(sb && st.kullanici ? st.dbGonderiler.map(dbGonderiHTML) : gonderiler.map(gonderiHTML)).join("")}
   </div>`;
 }
@@ -1743,15 +1731,45 @@ function olusturAc() {
     </div>`);
 }
 
+function gonderiFormAc() {
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto giris">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <button data-act="modalKapat" class="text-xl px-1" aria-label="Geri">←</button>
+        <span class="font-bold">Yeni gönderi</span>
+        <span class="w-6"></span>
+      </div>
+      <div class="p-4 space-y-3">
+        <textarea id="gfMetin" maxlength="180" rows="5" placeholder="Bugün Eskişehir'de ne oluyor?" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-cyan-400 resize-none"></textarea>
+        <button data-act="sesSec" class="px-4 py-2 rounded-full border border-white/20 text-sm">🎵 Şarkı ekle</button>
+        <p id="gfSes" class="text-[11px] text-slate-400"></p>
+        <p id="gfMesaj" class="text-xs text-rose-400 min-h-[1rem]"></p>
+      </div>
+      <div class="p-4 flex gap-2">
+        <button data-act="modalKapat" class="flex-1 py-3 rounded-xl bg-white/10 font-semibold text-sm">Vazgeç</button>
+        <button data-act="gfPaylas" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Paylaş</button>
+      </div>
+    </div>`);
+  const ses = st.bekleyenSes;
+  const el = document.getElementById("gfSes");
+  if (el && ses) el.textContent = "🎵 " + ses.name;
+}
+
+function gfPaylas() {
+  const t = document.getElementById("gfMetin").value.trim();
+  const mesaj = document.getElementById("gfMesaj");
+  if (!t && !st.bekleyenSes) { mesaj.textContent = "Bir şeyler yazın ya da şarkı ekleyin."; return; }
+  if (!sb || !st.kullanici) { mesaj.textContent = "Paylaşmak için giriş yapın."; return; }
+  const ses = st.bekleyenSes;
+  st.bekleyenSes = null;
+  modalKapat();
+  dbGonderiPaylas(t, null, ses);
+}
+
 function olustur(tur) {
   modalKapat();
   if (tur === "reels") { reelFormAc(); return; }
-  if (tur === "gonderi") {
-    st.sekme = "akis";
-    render();
-    setTimeout(() => { const g = document.getElementById("gonderiMetin"); if (g) g.focus(); }, 80);
-    return;
-  }
+  if (tur === "gonderi") { gonderiFormAc(); return; }
   if (tur === "hikaye") { $("#hikayeDosya").click(); }
 }
 
@@ -3074,6 +3092,7 @@ document.addEventListener('click', e => {
     case 'sesSec': $('#sesDosya').click(); break;
     case 'olusturAc': olusturAc(); break;
     case 'olustur': olustur(d.tur); break;
+    case 'gfPaylas': gfPaylas(); break;
     case 'arsivAc': arsivAc(); break;
     case 'arsivSec': arsivSec(+d.i); break;
     case 'oneCikar': oneCikar(+d.i); break;
