@@ -618,6 +618,7 @@ function profilHTML() {
       </div>
     </div>
 
+    <div class="flex justify-center mb-2"><button data-act="ayarlar" class="px-4 py-2 rounded-full border border-white/20 text-sm">⚙️ Ayarlar</button></div>
     <section class="mt-6">
       <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Gönderilerin</h3>
       ${profilGonderiHTML()}
@@ -1747,6 +1748,7 @@ function oturumAc(user) {
   const ad = (user.user_metadata && user.user_metadata.ad) || 'Sen';
   st.kullanici = {id: user.id, email: user.email, ad};
   BEN.ad = ad;
+  BEN.yas = (user.user_metadata && user.user_metadata.yas) || BEN.yas;
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
@@ -1850,6 +1852,68 @@ function sarkiKaydet() {
     if (st.sarki) localStorage.setItem("vm_sarki", JSON.stringify(st.sarki));
     else localStorage.removeItem("vm_sarki");
   } catch (err) {}
+}
+
+/* ---------- Ayarlar paneli ---------- */
+function ayarlarAc() {
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Ayarlar</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400">Ad</label>
+          <input id="ayarAd" maxlength="30" value="${esc(BEN.ad)}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Yaş</label>
+          <input id="ayarYas" type="number" min="18" max="99" value="${BEN.yas}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Yeni şifre (boş bırakırsan değişmez)</label>
+          <input id="ayarSifre" type="password" placeholder="En az 6 karakter" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+          <input id="ayarSifre2" type="password" placeholder="Yeni şifre tekrar" class="w-full mt-2 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+        </div>
+        <p id="ayarMesaj" class="text-xs text-center min-h-[1rem]"></p>
+        <button data-act="ayarKaydet" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Kaydet</button>
+      </div>
+    </div>`);
+}
+
+function ayarMesaj(t, hata) {
+  const m = document.getElementById("ayarMesaj");
+  if (!m) return;
+  m.textContent = t;
+  m.className = "text-xs text-center min-h-[1rem] " + (hata ? "text-rose-400" : "text-emerald-400");
+}
+
+async function ayarKaydet() {
+  const ad = document.getElementById("ayarAd").value.trim();
+  const yas = parseInt(document.getElementById("ayarYas").value, 10);
+  const sifre = document.getElementById("ayarSifre").value;
+  const sifre2 = document.getElementById("ayarSifre2").value;
+  if (!ad) return ayarMesaj("Adınızı yazın.", true);
+  if (!(yas >= 18 && yas <= 99)) return ayarMesaj("Yaş 18 ile 99 arasında olmalı.", true);
+  if (sifre || sifre2) {
+    if (sifre.length < 6) return ayarMesaj("Şifre en az 6 karakter olmalı.", true);
+    if (sifre !== sifre2) return ayarMesaj("Şifreler birbiriyle aynı değil.", true);
+  }
+  if (sb && st.kullanici) {
+    const {error} = await sb.auth.updateUser({data: {ad, yas}});
+    if (error) return ayarMesaj(hataMetni(error), true);
+    if (sifre) {
+      const r = await sb.auth.updateUser({password: sifre});
+      if (r.error) return ayarMesaj(hataMetni(r.error), true);
+    }
+  }
+  BEN.ad = ad;
+  BEN.yas = yas;
+  if (st.kullanici) st.kullanici.ad = ad;
+  modalKapat();
+  toast(sifre ? "Bilgilerin ve şifren güncellendi ✅" : "Bilgilerin güncellendi ✅");
+  render();
 }
 
 /* ---------- Olaylar ---------- */
@@ -1957,6 +2021,8 @@ document.addEventListener('click', e => {
       break;
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
+    case 'ayarlar': ayarlarAc(); break;
+    case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
     case 'parca': st.parca = +d.i; st.ilerleme = 0; st.calan = true; render(); break;
   }
