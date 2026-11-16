@@ -631,30 +631,53 @@ function profilHTML() {
              </div>` : "";
   return `
   <div class="giris pb-6">
-    <div class="flex flex-col items-center text-center pt-6">
-      <div class="relative mt-8">
+    <div class="flex items-center justify-between pt-2 pb-3">
+      <div class="font-bold text-base">@${esc(BEN.ad.toLowerCase().replace(/\s+/g, ""))}${st.gizlilik === "takipci" ? " 🔒" : ""}</div>
+      <button data-act="ayarlar" class="text-lg px-2" aria-label="Ayarlar">⚙️</button>
+    </div>
+
+    <div class="flex items-center gap-5">
+      <div class="relative shrink-0">
         ${notBaloncugu}
         <div class="halka goruldu">
-          <div data-act="profilFoto" class="cursor-pointer w-24 h-24 rounded-full border-4 border-[#0d0818] overflow-hidden flex items-center justify-center text-4xl font-black" style="background:${BEN.grad}">${st.benFoto ? `<img src="${st.benFoto}" class="w-full h-full object-cover">` : "S"}</div>
+          <div data-act="profilFoto" class="cursor-pointer w-20 h-20 rounded-full border-4 border-[#0d0818] overflow-hidden flex items-center justify-center text-3xl font-black" style="background:${BEN.grad}">${st.benFoto ? `<img src="${st.benFoto}" class="w-full h-full object-cover">` : "S"}</div>
         </div>
       </div>
-      <h2 class="mt-3 text-2xl font-black">${BEN.ad}, ${BEN.yas}</h2>
-      <p class="text-sm text-slate-400">📍 ${esc(BEN.sehir)} · ${esc(BEN.bolum)}</p>
-      <p class="text-sm mt-1">${esc(BEN.bio)}</p>
-      <p class="text-xs text-slate-400 mt-1"><button data-act="takipListe" data-t="takipci" class="underline">👥 ${takipciBen()} takipçi</button> · <button data-act="takipListe" data-t="takip" class="underline">${st.takipEdilen.length} takip ettiğin</button></p>
-      <p class="text-[11px] text-slate-500 mt-1">${st.gizlilik === "takipci" ? "🔒 Yalnızca takipçilere açık" : "🌐 Herkese açık"}</p>
-      <button data-act="profilFoto" class="text-xs text-cyan-300 underline mt-2">📷 Galeriden fotoğraf seç</button>
-      ${st.kullanici ? `<div class="text-[11px] text-slate-500 mt-1">${esc(st.kullanici.email)} · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button></div>` : ""}
-      <div class="flex gap-6 mt-4 text-center">
-        <div><div class="font-black text-lg text-amber-300">${puanHesapla()}</div><div class="text-[11px] text-slate-400">puan</div></div>
-        <div><div class="font-black text-lg">${st.eslesmeler.length}</div><div class="text-[11px] text-slate-400">eşleşme</div></div>
-        <div><div class="font-black text-lg">${toplamBegeni}</div><div class="text-[11px] text-slate-400">beğeni</div></div>
+      <div class="flex-1 grid grid-cols-3 text-center">
+        <div><div class="font-black text-lg">${st.benGonderiler.length}</div><div class="text-[11px] text-slate-400">gönderi</div></div>
+        <button data-act="takipListe" data-t="takipci"><div class="font-black text-lg">${takipciBen()}</div><div class="text-[11px] text-slate-400">takipçi</div></button>
+        <button data-act="takipListe" data-t="takip"><div class="font-black text-lg">${st.takipEdilen.length}</div><div class="text-[11px] text-slate-400">takip</div></button>
       </div>
     </div>
 
-    <div class="flex justify-center mb-2"><button data-act="ayarlar" class="px-4 py-2 rounded-full border border-white/20 text-sm">⚙️ Ayarlar</button></div>
-    <section class="mt-6">
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Gönderilerin</h3>
+    <div class="mt-3">
+      <div class="font-semibold">${esc(BEN.ad)}, ${BEN.yas}</div>
+      <div class="text-xs text-slate-400">📍 ${esc(BEN.sehir)} · 🎓 ${esc(BEN.bolum)}</div>
+      <div class="text-sm mt-1">${esc(BEN.bio)}</div>
+    </div>
+
+    <div class="flex gap-2 mt-4">
+      <button data-act="ayarlar" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili düzenle</button>
+      <button data-act="profilPaylas" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili paylaş</button>
+    </div>
+
+    <div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">
+      <button data-act="reelsEkle" class="flex flex-col items-center gap-1 shrink-0">
+        <span class="w-14 h-14 rounded-full border border-dashed border-white/30 flex items-center justify-center text-xl">+</span>
+        <span class="text-[10px] text-slate-400">Yeni</span>
+      </button>
+    </div>
+
+    <div class="text-[11px] text-slate-500 mt-2">${st.gizlilik === "takipci" ? "🔒 Yalnızca takipçilere açık" : "🌐 Herkese açık"} · 🏆 ${puanHesapla()} puan · 💗 ${toplamBegeni} beğeni</div>
+    <div class="text-[11px] mt-1"><button data-act="profilFoto" class="text-cyan-300 underline">📷 Fotoğraf değiştir</button>${st.kullanici ? ` · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button>` : ""}</div>
+    ${notKutusu}
+
+    <section class="mt-5">
+      <div class="flex justify-around border-t border-white/10 pt-2 mb-3 text-lg">
+        <span class="text-cyan-300" aria-label="Gönderiler">▦</span>
+        <button data-act="reelsAc" aria-label="Reels">🎬</button>
+        <span class="text-slate-500" aria-label="Etiketler">🏷️</span>
+      </div>
       ${profilGonderiHTML()}
     </section>
 
@@ -2444,6 +2467,7 @@ document.addEventListener('click', e => {
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
     case 'profilGor': profilGor(d.id); break;
+    case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
     case 'takipToggle': takipToggle(d.id); break;
     case 'takipListe': takipListeAc(d.t); break;
     case 'bildirimAc': bildirimAc(); break;
