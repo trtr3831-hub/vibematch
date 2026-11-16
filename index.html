@@ -2396,19 +2396,33 @@ async function aiBio() {
 function reelsAc() {
   const liste = st.reels;
   const icerik = liste.length
-    ? liste.map(r => `
+    ? liste.map((r, i) => `
         <section class="h-full snap-start relative bg-black flex items-center justify-center overflow-hidden">
           ${r.tip === "video"
             ? `<video src="${r.url}" controls playsinline loop class="max-h-full w-full object-contain"></video>`
             : `<img src="${r.url}" class="max-h-full w-full object-contain">`}
-          ${r.metin ? `<div class="absolute bottom-6 left-4 right-16 text-sm font-semibold drop-shadow">${esc(r.metin)}</div>` : ""}
-          <div class="absolute bottom-6 right-4 text-xs text-slate-300">${esc(r.yazar)}</div>
+          <div class="absolute right-3 bottom-24 flex flex-col items-center gap-5 text-white">
+            <button data-act="reelBegen" data-i="${i}" class="flex flex-col items-center text-2xl">${r.begendim ? "❤️" : "🤍"}<span class="text-[11px] mt-0.5">${r.begeni || 0}</span></button>
+            <button class="flex flex-col items-center text-2xl">💬<span class="text-[11px] mt-0.5">0</span></button>
+            <button data-act="profilPaylas" class="flex flex-col items-center text-2xl">↗️</button>
+          </div>
+          <div class="absolute left-4 right-16 bottom-6 text-white">
+            <div class="font-semibold text-sm">@${esc(String(r.yazar || "sen").toLowerCase())}</div>
+            ${r.metin ? `<div class="text-sm mt-1">${esc(r.metin)}</div>` : ""}
+          </div>
         </section>`).join("")
-    : `<div class="h-full flex items-center justify-center text-center text-slate-400 p-6">Henüz reels yok.<br>➕ ile foto veya video ekleyin.</div>`;
+    : `<div class="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 gap-3">
+         <div class="text-5xl">🎬</div>
+         <div>Henüz reels yok</div>
+         <button data-act="reelsEkle" class="px-4 py-2 rounded-full bg-cyan-400 text-black font-bold text-sm">Reels ekle</button>
+       </div>`;
   modalAc(`
     <div class="h-full bg-black relative">
-      <button data-act="modalKapat" class="absolute top-3 left-3 z-10 px-3 py-1 rounded-full bg-black/60 text-sm">✕ Kapat</button>
-      <button data-act="reelsEkle" class="absolute top-3 right-3 z-10 px-3 py-1 rounded-full bg-cyan-400 text-black text-sm font-bold">➕ Ekle</button>
+      <div class="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent text-white">
+        <button data-act="modalKapat" class="text-xl" aria-label="Kapat">✕</button>
+        <span class="font-bold">Reels</span>
+        <button data-act="reelsEkle" class="text-xl" aria-label="Ekle">＋</button>
+      </div>
       <div class="h-full overflow-y-auto snap-y snap-mandatory">${icerik}</div>
     </div>`);
 }
@@ -2610,6 +2624,11 @@ document.addEventListener('click', e => {
     }
     case 'sarkiSil': st.sarki = null; sarkiKaydet(); render(); break;
     case 'reelsAc': reelsAc(); break;
+    case 'reelBegen': {
+      const r = st.reels[+d.i];
+      if (r) { r.begendim = !r.begendim; r.begeni = (r.begeni || 0) + (r.begendim ? 1 : -1); reelsAc(); }
+      break;
+    }
     case 'aramaAc': aramaAc(); break;
     case 'aramaYap': aramaYap(); break;
     case 'kameraAc': $('#kameraDosya').click(); break;
