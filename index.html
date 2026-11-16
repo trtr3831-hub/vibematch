@@ -104,8 +104,7 @@
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
-    <button data-act="sekme" data-sekme="kesfet" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔥</span><span data-i18n="nav_kesfet">Keşfet</span></button>
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-4 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="ara" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔎</span>Ara</button>
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
@@ -189,7 +188,7 @@ const skor = p => (p.sehir === ESK ? 50 : 0) + ortakIlgi(p).length * 12 + Math.r
 const ADMIN_EPOSTA = "trtr3831@gmail.com";
 
 const st = {
-  sekme: 'kesfet',
+  sekme: 'akis',
   sira: 0,
   deste: [],
   animasyon: false,
@@ -752,7 +751,7 @@ function girisYap(eposta) {
 function cikis() {
   st.oturum = null;
   try { localStorage.removeItem("vm_oturum"); } catch (err) {}
-  st.sekme = "kesfet";
+  st.sekme = "akis";
   toast("Çıkış yapıldı");
   render();
 }
@@ -1526,7 +1525,7 @@ function render() {
   $('#puanRozet').textContent = puanHesapla();
   rozetGuncelle();
   const g = $('#gorunum');
-  const gorunumler = {ara: araHTML, kesfet: kesfetHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
+  const gorunumler = {ara: araHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
   g.innerHTML = gorunumler[st.sekme]();
   uygulaDil();
   cevirDOM(g);
