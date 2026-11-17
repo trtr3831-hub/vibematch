@@ -2575,8 +2575,9 @@ function zamanYaz(ts) {
 
 async function gonderiYukle() {
   if (!sb || !st.kullanici) return;
+  st.gonderiYuklendi = true;
   const benim = st.kullanici.id;
-  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(30);
+  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(60);
   const ids = (gs || []).map(g => g.id);
   let begeniler = [], yorumlar = [], sayiMap = {}, begenAdlari = {};
   if (ids.length) {
@@ -3020,21 +3021,21 @@ async function reelFormGonder() {
   reelsAc();
 }
 
-/* Yeni kullanıcıların keşif ızgarası */
-async function kesfetYukle() {
+/* Keşfet ızgarası: diğer kullanıcıların gerçek gönderileri (en çok beğenilen önce) */
+function kesfetYukle() {
   const kutu = document.getElementById("aramaSonuc");
   if (!kutu) return;
   if (!sb) { kutu.innerHTML = '<p class="text-center text-xs text-slate-500 py-8">Sunucu bağlantısı yok.</p>'; return; }
-  const benimId = st.kullanici ? st.kullanici.id : "00000000-0000-0000-0000-000000000000";
-  const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio").neq("id", benimId).order("updated_at", {ascending: false}).limit(24);
-  if (!document.getElementById("aramaSonuc")) return;
-  if (!data || !data.length) { kutu.innerHTML = '<p class="text-center text-xs text-slate-500 py-8">Henüz başka kullanıcı yok.</p>'; return; }
-  data.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
-  kutu.innerHTML = '<div class="grid grid-cols-3 gap-1">' + data.map(p => `
-    <button data-act="profilGor" data-id="${p.id}" class="aspect-square rounded-lg flex flex-col items-center justify-center p-2 text-center" style="background:${dbGrad(p.id)}">
-      <span class="text-2xl font-black">${esc((p.ad || "?")[0])}</span>
-      <span class="text-[11px] font-semibold truncate w-full mt-1">${esc(p.ad)}</span>
-    </button>`).join("") + "</div>";
+  if (!st.gonderiYuklendi && st.kullanici) gonderiYukle(); // yüklenince ızgarayı yeniden çizer
+  const liste = st.dbGonderiler.filter(g => !g.benim).sort((a, b) => (b.begeni - a.begeni) || (b.id - a.id));
+  if (!liste.length) { kutu.innerHTML = '<p class="text-center text-xs text-slate-500 py-8">Henüz gönderi yok. Diğer kullanıcılar paylaştıkça burada görünecek.</p>'; return; }
+  kutu.innerHTML = '<p class="text-[11px] text-slate-400 mb-2">Öne çıkan gönderiler</p><div class="grid grid-cols-3 gap-1">' + liste.map(g => {
+    const foto = (g.fotolar && g.fotolar[0]) || g.foto;
+    const icerik = foto
+      ? `<img src="${foto}" class="w-full h-full object-cover" loading="lazy">`
+      : `<div class="w-full h-full flex items-center justify-center p-2 text-center text-[11px] font-bold" style="background:${g.grad}">${esc((g.metin || "").slice(0, 60))}</div>`;
+    return `<button data-act="gonderiDetay" data-id="${g.id}" class="aspect-square relative overflow-hidden rounded-lg bg-white/5">${icerik}<span class="absolute bottom-1 left-1 text-[10px] bg-black/50 px-1.5 py-0.5 rounded">❤️ ${g.begeni}</span></button>`;
+  }).join("") + "</div>";
 }
 
 document.addEventListener("input", e => {
