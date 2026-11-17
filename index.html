@@ -103,7 +103,7 @@
     <div class="flex items-center gap-2"><button data-act="olusturAc" class="w-8 h-8 mr-2 rounded-full bg-white text-black font-bold text-lg leading-none" aria-label="Oluştur">＋</button>
     <button data-act="sekme" data-sekme="mesajlar" class="relative mr-2 text-lg" aria-label="Mesajlar">✈️</button>
     <button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
-    <div class="hidden sm:block text-xs px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">🏆 <span id="puanRozet">0</span> puan</div><button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
+    <button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
@@ -263,7 +263,6 @@ const st = {
   sikayetHedef: null,
   fotoHedef: "profil",
   authMod: "giris",
-  benHikayeSayi: 0,
   hikayeler: [
     {ad:'Elif',   grad:GRAD[0], metin:'Porsuk kenarı, sabah kahvesi ☕', goruldu:false, t: Date.now()},
     {ad:'Mert',   grad:GRAD[1], metin:'Halı saha perşembe 😎', goruldu:false, t: Date.now()},
@@ -286,10 +285,6 @@ const st = {
   hikayeZ: null
 };
 
-function puanHesapla() {
-  const alinanBegeni = st.benGonderiler.reduce((a, g) => a + g.begeni, 0);
-  return 240 + alinanBegeni * 10 + st.benHikayeSayi * 15 + st.eslesmeler.length * 5;
-}
 
 function notGetir() {
   if (st.not && Date.now() - st.not.t < 864e5) return st.not;
@@ -484,37 +479,6 @@ function profilGonderiHTML() {
 }
 
 
-function liderHTML() {
-  const liste = [
-    ...KISILER.filter(p => !engelliMi(p.id)).map(p => ({ad: p.ad, sehir: p.sehir, puan: p.puan, grad: p.grad})),
-    {ad: 'Sen', sehir: ESK, puan: puanHesapla(), grad: BEN.grad, benim: true}
-  ].sort((a, b) => b.puan - a.puan).slice(0, 10);
-  return `
-  <div class="giris">
-    <div class="text-center py-3">
-      <div class="text-5xl">👑</div>
-      <h2 class="text-2xl font-black neon mt-1">Eskişehir'in En Popülerleri</h2>
-      <p class="text-xs text-slate-400 mt-1">Hikaye ve gönderilerin beğeni aldıkça puan kazan, ilk 10'a gir.</p>
-    </div>
-    <ol class="space-y-2">
-      ${liste.map((p, i) => `
-        <li class="flex items-center gap-3 p-3 rounded-2xl border ${i === 0 ? 'border-amber-300/60 bg-amber-300/10 parla' : 'border-white/10 bg-white/5'} ${p.benim ? 'ring-2 ring-cyan-400' : ''}">
-          <span class="w-7 text-center font-black ${i < 3 ? 'text-amber-300' : 'text-slate-400'}">${i === 0 ? '👑' : i + 1}</span>
-          ${p.benim && st.benFoto ? `<img src="${st.benFoto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full shrink-0" style="background:${p.grad}"></div>`}
-          <div class="flex-1 min-w-0">
-            <div class="font-semibold truncate">${esc(p.ad)}${p.benim ? ' (sen)' : ''}</div>
-            <div class="text-[11px] text-slate-400">${esc(p.sehir)}</div>
-          </div>
-          <div class="font-black text-amber-300">${p.puan} <span class="text-[10px] text-slate-400">puan</span></div>
-        </li>`).join('')}
-    </ol>
-    <div class="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 space-y-1">
-      <div>❤️ Her gönderi beğenisi: +10 puan</div>
-      <div>📸 Her hikaye paylaşımı: +15 puan</div>
-      <div>💞 Her eşleşme: +5 puan</div>
-    </div>
-  </div>`;
-}
 
 function balon(x, i, id) {
   const karsidan = x.g === "them";
@@ -832,7 +796,6 @@ function ayarlarHTML() {
   const girdi = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
   return `
   <div class="giris pb-6 space-y-6 pt-2">
-    <section>${liderHTML()}</section>
     <section><button data-act="arsivAc" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">🗂️ Hikaye arşivi</button></section>
     <section><button data-act="kaydedilenlerAc" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">🔖 Kaydedilenler</button></section>
     <h2 class="text-2xl font-black neon">Ayarlar</h2>
@@ -1537,12 +1500,11 @@ function render() {
   if (navEl) navEl.classList.toggle('hidden', !st.oturum);
   if (!st.oturum) { document.getElementById('gorunum').innerHTML = girisHTML(); uygulaDil(); cevirDOM(document.getElementById('gorunum')); return; }
   document.querySelectorAll('.sekme').forEach(b => b.setAttribute('aria-current', String(b.dataset.sekme === st.sekme)));
-  $('#puanRozet').textContent = puanHesapla();
   rozetGuncelle();
   const arti = document.querySelector('[data-act="olusturAc"]');
   if (arti) arti.classList.toggle('hidden', !(st.sekme === 'akis' || st.sekme === 'profil'));
   const g = $('#gorunum');
-  const gorunumler = {ara: araHTML, akis: akisHTML, liderlik: liderHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
+  const gorunumler = {ara: araHTML, akis: akisHTML, mesajlar: mesajHTML, profil: profilHTML, ayarlar: ayarlarHTML, admin: adminHTML};
   g.innerHTML = gorunumler[st.sekme]();
   uygulaDil();
   cevirDOM(g);
@@ -1692,8 +1654,7 @@ $('#hikayeDosya').addEventListener('change', e => {
     st.arsiv.unshift({foto: r.result, t: Date.now()});
     arsivKaydet();
     if (sb && st.kullanici) sb.from("hikayeler").insert({foto: r.result}).then(() => { hikayeYukle(); highlightYukle(); });
-    st.benHikayeSayi++;
-    toast('Hikayen yayında! +15 puan 🎉');
+    toast('Hikayen yayında! 🎉');
     render();
   };
   r.readAsDataURL(f);
@@ -3684,7 +3645,7 @@ document.addEventListener('click', e => {
       if (!t && !st.bekleyenFoto) { toast('Önce bir şey yaz ✍️'); break; }
       if (sb && st.kullanici) { dbGonderiPaylas(t, st.bekleyenFoto, st.bekleyenSes); st.bekleyenFoto = null; st.bekleyenSes = null; break; }
       st.benGonderiler.unshift({id: Date.now(), yazar: 'Sen', sehir: ESK, metin: t, grad: GRAD[Math.floor(Math.random() * GRAD.length)], begeni: 0, zaman: 'az önce', foto: st.bekleyenFoto, yorumlar: []}); st.bekleyenFoto = null;
-      toast('Paylaşıldı! Beğeniler puanına eklenecek ✨');
+      toast('Paylaşıldı! ✨');
       render();
       break;
     }
@@ -3897,15 +3858,6 @@ setInterval(() => {
   if (i) i.style.width = st.ilerleme + '%';
 }, 500);
 
-/* Gönderilere sahte beğeni gelmesi (puan akışını gösterir) */
-setInterval(() => {
-  if (!st.benGonderiler.length) return;
-  const g = st.benGonderiler[Math.floor(Math.random() * st.benGonderiler.length)];
-  g.begeni++;
-  toast('💗 Bir gönderin beğenildi! +10 puan');
-  if (st.sekme === 'liderlik' || st.sekme === 'profil') render();
-  else $('#puanRozet').textContent = puanHesapla();
-}, 25000);
 </script>
 <script>
 if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
