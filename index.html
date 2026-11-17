@@ -120,7 +120,7 @@
   <input type="file" id="reelsDosya" accept="image/*,video/*" class="hidden">
   <input type="file" id="kameraDosya" accept="image/*,video/*" capture="environment" class="hidden">
   <input type="file" id="sesDosya" accept="audio/*" class="hidden">
-  <input type="file" id="gfDosya" accept="image/*" class="hidden">
+  <input type="file" id="gfDosya" accept="image/*" multiple class="hidden">
   <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
     <div class="w-full max-w-xs text-center">
       <div class="text-3xl font-black neon mb-1">VibeMatch</div>
@@ -235,6 +235,7 @@ const st = {
   dbSohbetMesajlar: [],
   kaydedilen: [],
   dbHikayeler: [],
+  gfFotolar: [],
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -1777,12 +1778,12 @@ function gonderiFormAc() {
 
 document.addEventListener("change", e => {
   if (e.target.id !== "gfDosya") return;
-  const f = e.target.files[0];
+  const dosyalar = Array.from(e.target.files || []).slice(0, 10);
   e.target.value = "";
-  if (!f) return;
-  st.gfFoto = f;
+  if (!dosyalar.length) return;
+  st.gfFotolar = dosyalar;
   const kutu = document.getElementById("gfOnizleme");
-  if (kutu) kutu.innerHTML = '<img src="' + URL.createObjectURL(f) + '" class="w-full rounded-2xl object-cover max-h-72">';
+  if (kutu) kutu.innerHTML = '<div class="flex gap-2 overflow-x-auto kaydir">' + dosyalar.map(f => '<img src="' + URL.createObjectURL(f) + '" class="w-24 h-24 rounded-xl object-cover shrink-0">').join("") + '</div><p class="text-[11px] text-slate-400 mt-1">' + dosyalar.length + ' fotoğraf seçildi</p>';
 });
 
 function dosyayiMetne(f) {
@@ -1796,14 +1797,16 @@ function dosyayiMetne(f) {
 async function gfPaylas() {
   const t = document.getElementById("gfMetin").value.trim();
   const mesaj = document.getElementById("gfMesaj");
-  if (!t && !st.bekleyenSes && !st.gfFoto) { mesaj.textContent = "Bir şey yazın, foto ya da şarkı ekleyin."; return; }
+  if (!t && !st.bekleyenSes && !st.gfFotolar.length) { mesaj.textContent = "Bir şey yazın, foto ya da şarkı ekleyin."; return; }
   if (!sb || !st.kullanici) { mesaj.textContent = "Paylaşmak için giriş yapın."; return; }
   const ses = st.bekleyenSes;
-  const foto = st.gfFoto ? await dosyayiMetne(st.gfFoto) : null;
+  const fotolar = [];
+  for (const f of st.gfFotolar) fotolar.push(await dosyayiMetne(f));
+  const foto = fotolar.length ? fotolar[0] : null;
   st.bekleyenSes = null;
-  st.gfFoto = null;
+  st.gfFotolar = [];
   modalKapat();
-  dbGonderiPaylas(t, foto, ses);
+  dbGonderiPaylas(t, foto, ses, fotolar);
 }
 
 function olustur(tur) {
@@ -2562,7 +2565,7 @@ function zamanYaz(ts) {
 async function gonderiYukle() {
   if (!sb || !st.kullanici) return;
   const benim = st.kullanici.id;
-  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,ses,created_at").order("created_at", {ascending: false}).limit(30);
+  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(30);
   const ids = (gs || []).map(g => g.id);
   let begeniler = [], yorumlar = [];
   if (ids.length) {
@@ -2573,7 +2576,7 @@ async function gonderiYukle() {
   }
   st.dbGonderiler = (gs || []).map(g => ({
     id: g.id, sahip: g.user_id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
-    metin: g.metin || "", foto: g.foto, ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
+    metin: g.metin || "", foto: g.foto, fotolar: g.fotolar || (g.foto ? [g.foto] : []), ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
     begeni: begeniler.filter(x => x.gonderi_id === g.id).length,
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
@@ -2585,7 +2588,7 @@ async function gonderiYukle() {
   render();
 }
 
-async function dbGonderiPaylas(metin, foto, ses) {
+async function dbGonderiPaylas(metin, foto, ses, fotolar) {
   let sesUrl = null;
   if (ses) {
     const yol = st.kullanici.id + "/" + Date.now() + "-" + ses.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -2593,7 +2596,7 @@ async function dbGonderiPaylas(metin, foto, ses) {
     if (hata) return toast("Şarkı yüklenemedi: " + hata.message);
     sesUrl = sb.storage.from("sesler").getPublicUrl(yol).data.publicUrl;
   }
-  const {error} = await sb.from("gonderiler").insert({yazar: BEN.ad, sehir: BEN.sehir, metin: metin || "", foto: foto || null, ses: sesUrl});
+  const {error} = await sb.from("gonderiler").insert({yazar: BEN.ad, sehir: BEN.sehir, metin: metin || "", foto: foto || null, fotolar: fotolar && fotolar.length > 1 ? fotolar : null, ses: sesUrl});
   if (error) return toast("Paylaşılamadı: " + error.message);
   toast("Paylaşıldı ✨");
   gonderiYukle();
@@ -2667,10 +2670,13 @@ function dbGonderiHTML(g) {
   const avatar = g.benim && st.benFoto
     ? `<img src="${st.benFoto}" class="w-8 h-8 rounded-full object-cover">`
     : `<div class="w-8 h-8 rounded-full" style="background:${g.grad}"></div>`;
-  const medya = g.foto
-    ? `<img src="${g.foto}" class="w-full aspect-square object-cover">`
-    : `<div class="w-full aspect-square flex items-center justify-center p-6 text-center text-xl font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
-  const aciklama = g.foto && g.metin ? `<p class="px-1 text-sm"><span class="font-semibold">${esc(g.yazar)}</span> ${esc(g.metin)}</p>` : "";
+  const listeFoto = (g.fotolar && g.fotolar.length) ? g.fotolar : (g.foto ? [g.foto] : []);
+  const medya = listeFoto.length > 1
+    ? `<div class="flex overflow-x-auto snap-x snap-mandatory kaydir">${listeFoto.map(f => `<img src="${f}" class="w-full aspect-square object-cover shrink-0 snap-center">`).join("")}</div><p class="text-[11px] text-slate-400 text-right px-1 pt-1">${listeFoto.length} fotoğraf · kaydır</p>`
+    : listeFoto.length === 1
+      ? `<img src="${listeFoto[0]}" class="w-full aspect-square object-cover">`
+      : `<div class="w-full aspect-square flex items-center justify-center p-6 text-center text-xl font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
+  const aciklama = listeFoto.length && g.metin ? `<p class="px-1 text-sm"><span class="font-semibold">${esc(g.yazar)}</span> ${esc(g.metin)}</p>` : "";
   const yorumListe = g.yorumlar.map(y => `<div class="text-xs"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)}</div>`).join("");
   return `
       <article class="mb-6 giris">
