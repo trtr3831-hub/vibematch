@@ -673,7 +673,7 @@ function profilHTML() {
   <div class="giris pb-6">
     <div class="flex items-center justify-between pt-2 pb-3">
       <div class="font-bold text-base">@${esc(BEN.ad.toLowerCase().replace(/\s+/g, ""))}${st.gizlilik === "takipci" ? " 🔒" : ""}</div>
-      <button data-act="ayarlar" class="text-lg px-2" aria-label="Ayarlar">⚙️</button>
+      <span></span>
     </div>
 
     <div class="flex items-center gap-5">
@@ -696,7 +696,7 @@ function profilHTML() {
     </div>
 
     <div class="flex gap-2 mt-4">
-      <button data-act="ayarlar" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili düzenle</button>
+      <button data-act="profilDuzenle" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili düzenle</button>
       <button data-act="profilPaylas" class="flex-1 py-2 rounded-xl bg-white/10 text-sm font-semibold">Profili paylaş</button>
     </div>
 
@@ -852,6 +852,26 @@ function ayarlarHTML() {
       <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Hesap</h3>
       <p class="text-sm mb-3">${esc(st.oturum)}</p>
       <button data-act="cikis" class="w-full py-2.5 rounded-full border border-white/20 text-sm">Çıkış yap</button>
+    </section>
+
+    <section>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Gizlilik</h3>
+      <div class="space-y-2">
+        <select id="ayarGizlilik" class="${girdi}">
+          <option value="herkes" ${st.gizlilik === "herkes" ? "selected" : ""}>Herkese açık</option>
+          <option value="takipci" ${st.gizlilik === "takipci" ? "selected" : ""}>Yalnızca takipçilere açık</option>
+        </select>
+        <select id="ayarBegeniGizli" class="${girdi}">
+          <option value="0" ${!st.vBegeniGizli ? "selected" : ""}>Yeni gönderilerde beğeni sayısı: herkes görsün</option>
+          <option value="1" ${st.vBegeniGizli ? "selected" : ""}>Yeni gönderilerde beğeni sayısı: gizli</option>
+        </select>
+        <select id="ayarYorumKapali" class="${girdi}">
+          <option value="0" ${!st.vYorumKapali ? "selected" : ""}>Yeni gönderilerde yorumlar: açık</option>
+          <option value="1" ${st.vYorumKapali ? "selected" : ""}>Yeni gönderilerde yorumlar: kapalı</option>
+        </select>
+        <button data-act="gizlilikKaydet" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Gizlilik tercihlerini kaydet</button>
+        <p id="gizlilikMesaj" class="text-xs text-center min-h-[1rem]"></p>
+      </div>
     </section>
 
     ${dilHTML()}
@@ -3543,52 +3563,30 @@ function reelsDosyaIsle(f) {
 }
 
 /* ---------- Ayarlar paneli ---------- */
-function ayarlarAc() {
+function profilDuzenleAc() {
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-xl font-black">Ayarlar</h2>
+        <h2 class="text-xl font-black">Profili düzenle</h2>
         <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
       </div>
       <div class="space-y-4">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center font-black shrink-0" style="background:${BEN.grad}">${st.benFoto ? `<img src="${st.benFoto}" class="w-full h-full object-cover">` : esc((BEN.ad || "S")[0])}</div>
+          <button data-act="profilFoto" class="px-4 py-2 rounded-full border border-white/20 text-sm">📷 Fotoğraf değiştir</button>
+        </div>
         <div>
           <label class="text-xs text-slate-400">Ad</label>
           <input id="ayarAd" maxlength="30" value="${esc(BEN.ad)}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">Kısa açıklama (bio)</label>
-          <textarea id="ayarBio" maxlength="120" rows="2" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
-          <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">Hesap görünürlüğü</label>
-          <select id="ayarGizlilik" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-            <option value="herkes" ${st.gizlilik === "herkes" ? "selected" : ""}>Herkese açık</option>
-            <option value="takipci" ${st.gizlilik === "takipci" ? "selected" : ""}>Yalnızca takipçilere açık</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">Yeni gönderilerde beğeni sayısı</label>
-          <select id="ayarBegeniGizli" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-            <option value="0" ${!st.vBegeniGizli ? "selected" : ""}>Herkes görsün</option>
-            <option value="1" ${st.vBegeniGizli ? "selected" : ""}>Gizli (sayı gösterilmez)</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">Yeni gönderilerde yorumlar</label>
-          <select id="ayarYorumKapali" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-            <option value="0" ${!st.vYorumKapali ? "selected" : ""}>Açık</option>
-            <option value="1" ${st.vYorumKapali ? "selected" : ""}>Kapalı</option>
-          </select>
         </div>
         <div>
           <label class="text-xs text-slate-400">Yaş</label>
           <input id="ayarYas" type="number" min="18" max="99" value="${BEN.yas}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
         </div>
         <div>
-          <label class="text-xs text-slate-400">Yeni şifre (boş bırakırsan değişmez)</label>
-          <input id="ayarSifre" type="password" placeholder="En az 6 karakter" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-          <input id="ayarSifre2" type="password" placeholder="Yeni şifre tekrar" class="w-full mt-2 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+          <label class="text-xs text-slate-400">Kısa açıklama (bio)</label>
+          <textarea id="ayarBio" maxlength="120" rows="2" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
+          <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
         </div>
         <p id="ayarMesaj" class="text-xs text-center min-h-[1rem]"></p>
         <button data-act="ayarKaydet" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Kaydet</button>
@@ -3607,40 +3605,40 @@ async function ayarKaydet() {
   const ad = document.getElementById("ayarAd").value.trim();
   const yas = parseInt(document.getElementById("ayarYas").value, 10);
   const bio = document.getElementById("ayarBio").value.trim().slice(0, 120);
-  const gizlilik = document.getElementById("ayarGizlilik").value === "takipci" ? "takipci" : "herkes";
-  const sifre = document.getElementById("ayarSifre").value;
-  const sifre2 = document.getElementById("ayarSifre2").value;
   if (!ad) return ayarMesaj("Adınızı yazın.", true);
   if (!(yas >= 18 && yas <= 99)) return ayarMesaj("Yaş 18 ile 99 arasında olmalı.", true);
-  if (sifre || sifre2) {
-    if (sifre.length < 6) return ayarMesaj("Şifre en az 6 karakter olmalı.", true);
-    if (sifre !== sifre2) return ayarMesaj("Şifreler birbiriyle aynı değil.", true);
-  }
   if (sb && st.kullanici) {
-    const {error} = await sb.auth.updateUser({data: {ad, yas, bio, gizlilik}});
+    const {error} = await sb.auth.updateUser({data: {ad, yas, bio}});
     if (error) return ayarMesaj(hataMetni(error), true);
-    if (sifre) {
-      const r = await sb.auth.updateUser({password: sifre});
-      if (r.error) return ayarMesaj(hataMetni(r.error), true);
-    }
   }
-  const vBegeni = document.getElementById("ayarBegeniGizli").value === "1";
-  const vYorum = document.getElementById("ayarYorumKapali").value === "1";
-  if (sb && st.kullanici) {
-    const {error: pe} = await sb.from("profiles").update({gizlilik, varsayilan_begeni_gizli: vBegeni, varsayilan_yorum_kapali: vYorum}).eq("id", st.kullanici.id);
-    if (pe) return ayarMesaj("Tercihler kaydedilemedi: " + pe.message, true);
-  }
-  st.vBegeniGizli = vBegeni;
-  st.vYorumKapali = vYorum;
   BEN.ad = ad;
   BEN.yas = yas;
   BEN.bio = bio;
-  st.gizlilik = gizlilik;
-  try { localStorage.setItem("vm_gizlilik", gizlilik); } catch (err) {}
   if (st.kullanici) st.kullanici.ad = ad;
   modalKapat();
-  toast(sifre ? "Bilgilerin ve şifren güncellendi ✅" : "Bilgilerin güncellendi ✅");
+  toast("Profilin güncellendi ✅");
   profilDbKaydet();
+  render();
+}
+
+// Ayarlar merkezindeki gizlilik tercihleri
+async function gizlilikKaydet() {
+  const gizlilik = document.getElementById("ayarGizlilik").value === "takipci" ? "takipci" : "herkes";
+  const vBegeni = document.getElementById("ayarBegeniGizli").value === "1";
+  const vYorum = document.getElementById("ayarYorumKapali").value === "1";
+  const m = document.getElementById("gizlilikMesaj");
+  const hata = (t) => { if (m) { m.textContent = t; m.className = "text-xs text-center min-h-[1rem] text-rose-400"; } };
+  if (sb && st.kullanici) {
+    const {error: pe} = await sb.from("profiles").update({gizlilik, varsayilan_begeni_gizli: vBegeni, varsayilan_yorum_kapali: vYorum}).eq("id", st.kullanici.id);
+    if (pe) return hata("Kaydedilemedi: " + pe.message);
+    const {error} = await sb.auth.updateUser({data: {gizlilik}});
+    if (error) return hata(hataMetni(error));
+  }
+  st.gizlilik = gizlilik;
+  st.vBegeniGizli = vBegeni;
+  st.vYorumKapali = vYorum;
+  try { localStorage.setItem("vm_gizlilik", gizlilik); } catch (err) {}
+  toast("Gizlilik tercihleri kaydedildi ✅");
   render();
 }
 
@@ -3833,7 +3831,9 @@ document.addEventListener('click', e => {
     case 'hlGecis': hlGecis(+d.y); break;
     case 'hlSil': hlSil(d.id); break;
     case 'hlKapat': hlKapat(); break;
-    case 'ayarlar': ayarlarAc(); break;
+    case 'ayarlar': st.sekme = 'ayarlar'; render(); break;
+    case 'profilDuzenle': profilDuzenleAc(); break;
+    case 'gizlilikKaydet': gizlilikKaydet(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
     case 'parca': st.parca = +d.i; st.ilerleme = 0; st.calan = true; render(); break;
