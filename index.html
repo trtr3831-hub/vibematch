@@ -2568,7 +2568,7 @@ async function gonderiYukle() {
   const benim = st.kullanici.id;
   const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(30);
   const ids = (gs || []).map(g => g.id);
-  let begeniler = [], yorumlar = [], sayiMap = {};
+  let begeniler = [], yorumlar = [], sayiMap = {}, begenAdlari = {};
   if (ids.length) {
     const b = await sb.from("begeniler").select("gonderi_id,user_id").in("gonderi_id", ids);
     begeniler = b.data || [];
@@ -2576,11 +2576,17 @@ async function gonderiYukle() {
     yorumlar = y.data || [];
     const sayiRes = await sb.rpc("gonderi_begeni_sayilari", {idler: ids});
     (sayiRes.data || []).forEach(r => { sayiMap[r.gonderi_id] = r.sayi; });
+    const bIds = [...new Set(begeniler.map(b => b.user_id))];
+    if (bIds.length) {
+      const {data: bp} = await sb.from("profiles").select("id,ad").in("id", bIds);
+      (bp || []).forEach(p => { begenAdlari[p.id] = p.ad; });
+    }
   }
   st.dbGonderiler = (gs || []).map(g => ({
     id: g.id, sahip: g.user_id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
     metin: g.metin || "", foto: g.foto, fotolar: g.fotolar || (g.foto ? [g.foto] : []), ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
     begeni: sayiMap[g.id] || 0,
+    begenenler: (g.user_id === benim) ? begeniler.filter(x => x.gonderi_id === g.id).map(x => begenAdlari[x.user_id] || "Kullanıcı") : [],
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
   }));
@@ -2763,7 +2769,7 @@ function dbGonderiHTML(g) {
           <button data-act="dbYorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
           <button data-act="dbKaydet" data-id="${g.id}" class="text-xl ml-auto" aria-label="Kaydet">${st.kaydedilen.includes(g.id) ? "🔖" : "📑"}</button>
         </div>
-        <p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>
+        ${g.benim && g.begenenler.length ? `<div class="px-1 pt-1 flex items-center gap-2 text-sm"><div class="flex -space-x-2">${g.begenenler.slice(0, 3).map((a, i) => `<span class="w-6 h-6 rounded-full border border-[#0d0818] flex items-center justify-center text-[10px] font-bold" style="background:${["#ff2e88", "#00e5ff", "#ffd166"][i % 3]}">${esc((a || "?")[0])}</span>`).join("")}</div><span>${g.begenenler.length === 1 ? `<b>${esc(g.begenenler[0])}</b> beğendi` : `<b>${esc(g.begenenler[0])}</b> ve <b>${g.begenenler.length - 1} kişi daha</b> beğendi`}</span></div>` : `<p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>`}
         ${g.benim ? `<button data-act="dbGonderiSil" data-id="${g.id}" class="px-1 pt-1 text-xs text-rose-400 text-left">🗑️ Gönderiyi sil</button>` : ""}
         ${aciklama}
         <button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>
