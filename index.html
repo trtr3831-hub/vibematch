@@ -4096,7 +4096,7 @@ async function dbKonusmaYukle() {
 async function dbSohbetYukle(diger) {
   if (!sb || !st.kullanici) return;
   const benim = st.kullanici.id;
-  const {data} = await sb.from("mesajlar_db").select("id,gonderen,alici,metin,created_at").is("reel_id", null)
+  const {data} = await sb.from("mesajlar_db").select("id,gonderen,alici,metin,foto,ses,created_at").is("reel_id", null)
     .or("and(gonderen.eq." + benim + ",alici.eq." + diger + "),and(gonderen.eq." + diger + ",alici.eq." + benim + ")")
     .order("created_at", {ascending: true}).limit(200);
   st.dbSohbetMesajlar = data || [];
@@ -4115,10 +4115,18 @@ function dbSohbetHTML() {
     </div>
     <div id="dbMesajKutu" class="flex-1 space-y-2 py-3">${dbBalonlar()}</div>
     <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
+      <label class="px-3 rounded-full bg-white/10 flex items-center cursor-pointer text-lg" aria-label="Fotoğraf veya ses ekle">📎<input id="dbDosya" type="file" accept="image/*,audio/*" class="hidden"></label>
       <input id="dbMesajGiris" maxlength="200" placeholder="Bir mesaj yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 outline-none focus:border-cyan-400 text-sm">
       <button data-act="dbMesajGonder" class="px-4 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Gönder</button>
     </div>
   </div>`;
+}
+
+// Balonun içeriği: fotoğraf, ses ve/veya metin
+function dbMedya(m) {
+  return (m.foto ? `<img src="${m.foto}" class="rounded-xl max-h-60 w-full object-cover mb-1">` : "")
+    + (m.ses ? `<audio src="${m.ses}" controls class="w-full max-w-[220px] mb-1"></audio>` : "")
+    + (m.metin ? esc(m.metin) : "");
 }
 
 function dbBalonlar() {
@@ -4128,10 +4136,43 @@ function dbBalonlar() {
     const bende = m.gonderen === benim;
     const saat = new Date(m.created_at).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"});
     return bende
-      ? `<div class="flex justify-end"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-pink-500 to-fuchsia-600 text-sm">${esc(m.metin)}<div class="text-[10px] text-white/70 mt-0.5 text-right">${saat}</div></div></div>`
-      : `<div class="flex"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-bl-sm bg-white/10 text-sm">${esc(m.metin)}<div class="text-[10px] text-slate-400 mt-0.5">${saat}</div></div></div>`;
+      ? `<div class="flex justify-end"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-pink-500 to-fuchsia-600 text-sm">${dbMedya(m)}<div class="text-[10px] text-white/70 mt-0.5 text-right">${saat}</div></div></div>`
+      : `<div class="flex"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-bl-sm bg-white/10 text-sm">${dbMedya(m)}<div class="text-[10px] text-slate-400 mt-0.5">${saat}</div></div></div>`;
   }).join("");
 }
+
+// Sohbete fotoğraf veya ses: seçildiği anda gönderilir; yazılmış metin varsa onunla birlikte
+document.addEventListener("change", async e => {
+  if (e.target.id !== "dbDosya") return;
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f || !st.dbSohbetAcik || !sb || !st.kullanici) return;
+  const inp = document.getElementById("dbMesajGiris");
+  const metin = inp ? inp.value.trim().slice(0, 200) : "";
+  try {
+    if (f.type.indexOf("image") === 0) {
+      const veri = await gorselKucult(f, 900);
+      const {error} = await sb.from("mesajlar_db").insert({alici: st.dbSohbetAcik, foto: veri, metin: metin || null});
+      if (error) { toast("Gönderilemedi: " + error.message); return; }
+    } else if (f.type.indexOf("audio") === 0) {
+      const yol = st.kullanici.id + "/dm-" + Date.now() + "-" + f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const {error: hata} = await sb.storage.from("sesler").upload(yol, f, {contentType: f.type});
+      if (hata) { toast("Ses yüklenemedi: " + hata.message); return; }
+      const url = sb.storage.from("sesler").getPublicUrl(yol).data.publicUrl;
+      const {error} = await sb.from("mesajlar_db").insert({alici: st.dbSohbetAcik, ses: url, metin: metin || null});
+      if (error) { toast("Gönderilemedi: " + error.message); return; }
+    } else {
+      toast("Yalnızca fotoğraf veya ses gönderebilirsin");
+      return;
+    }
+    if (inp) inp.value = "";
+    await sb.from("bildirimler").insert({alici: st.dbSohbetAcik, tur: "mesaj", metin: BEN.ad + " sana mesaj gönderdi"});
+    await dbSohbetYukle(st.dbSohbetAcik);
+    render();
+  } catch (err) {
+    toast("Gönderilemedi");
+  }
+});
 
 async function dbMesajGonder() {
   const inp = document.getElementById("dbMesajGiris");
