@@ -242,6 +242,8 @@ const st = {
   dbArsiv: [],
   dbHighlight: [],
   vBegeniGizli: false,
+  profilSekme: 'gonderi',
+  dbKayitli: [],
   vYorumKapali: false,
   arsivSecim: [],
   hlAktif: null,
@@ -706,11 +708,11 @@ function profilHTML() {
 
     <section class="mt-5">
       <div class="flex justify-around border-t border-white/10 pt-2 mb-3 text-lg">
-        <span class="text-cyan-300" aria-label="Gönderiler">▦</span>
+        <button data-act="profilSekme" data-s="gonderi" class="${st.profilSekme === 'kayit' ? 'text-slate-500' : 'text-cyan-300'}" aria-label="Gönderiler">▦</button>
         <button data-act="reelsAc" aria-label="Reels">🎬</button>
-        <span class="text-slate-500" aria-label="Etiketler">🏷️</span>
+        <button data-act="profilSekme" data-s="kayit" class="${st.profilSekme === 'kayit' ? 'text-cyan-300' : 'text-slate-500'}" aria-label="Kaydedilenler">🔖</button>
       </div>
-      ${profilGonderiHTML()}
+      ${st.profilSekme === 'kayit' ? kayitliHTML() : profilGonderiHTML()}
     </section>
 
     
@@ -1985,6 +1987,71 @@ async function oynatYanitGonder(uid) {
   oynatGoster();
 }
 
+/* ---------- Kaydedilenler (profil sekmesi) ---------- */
+function profilSekme(s) {
+  st.profilSekme = s;
+  if (s === 'kayit') { kaydedilenYukle(); return; }
+  render();
+}
+
+// Kaydedilen gönderileri sunucudan yükler (akışta olmayan eski gönderiler dahil)
+async function kaydedilenYukle() {
+  if (!sb || !st.kullanici) return;
+  const {data: kay, error} = await sb.from("kaydedilenler").select("gonderi_id").eq("user_id", st.kullanici.id).order("created_at", {ascending: false}).limit(120);
+  if (error) { toast("Kaydedilenler yüklenemedi: " + error.message); return; }
+  const ids = (kay || []).map(k => k.gonderi_id);
+  let gs = [];
+  if (ids.length) {
+    const {data} = await sb.from("gonderiler").select("id,user_id,yazar,metin,foto,fotolar").in("id", ids);
+    gs = data || [];
+  }
+  const sira = new Map(ids.map((id, i) => [id, i]));
+  gs.sort((x, y) => sira.get(x.id) - sira.get(y.id));
+  st.dbKayitli = gs.map(g => ({id: g.id, sahip: g.user_id, yazar: g.yazar || "Kullanıcı", metin: g.metin || "", foto: (g.fotolar && g.fotolar[0]) || g.foto, grad: dbGrad(g.user_id)}));
+  st.kaydedilen = ids;
+  if (st.sekme === 'profil') render();
+}
+
+function kayitliHTML() {
+  const liste = st.dbKayitli || [];
+  if (!liste.length) return `<p class="text-center text-slate-400 py-10 text-sm">Henüz kaydettiğin bir gönderi yok. Gönderide 📑 simgesine dokun.</p>`;
+  return `<div class="grid grid-cols-3 gap-1 mt-2">${liste.map(g => `
+    <button data-act="kayitliAc" data-id="${g.id}" class="aspect-square rounded-lg overflow-hidden" style="background:${g.grad}">
+      ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end text-left">${esc(g.metin.slice(0, 80))}</div>`}
+    </button>`).join("")}</div>`;
+}
+
+function kayitliAc(id) {
+  const g = (st.dbKayitli || []).find(x => x.id == id);
+  if (!g) return;
+  modalAc(`
+    <div class="h-full bg-black flex flex-col items-center justify-center p-6 giris">
+      ${g.foto ? `<img src="${g.foto}" class="max-h-[60%] rounded-2xl object-contain">` : `<div class="max-w-xs p-6 rounded-2xl text-center text-lg font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`}
+      <p class="text-sm mt-3 text-slate-300">${esc(g.yazar)}</p>
+      <div class="flex gap-2 mt-5 w-full max-w-xs">
+        <button data-act="kayitliGor" data-id="${g.id}" class="flex-1 py-2.5 rounded-full border border-white/20 text-sm">Gönderiyi aç</button>
+        <button data-act="kayitliCikar" data-id="${g.id}" class="flex-1 py-2.5 rounded-full border border-rose-400 text-rose-300 text-sm">Kaydedilenlerden çıkar</button>
+      </div>
+      <button data-act="modalKapat" class="mt-4 text-sm text-slate-400">Kapat</button>
+    </div>`);
+}
+
+// Akışta yüklü ise yorumlarıyla birlikte aç
+function kayitliGor(id) {
+  if (!st.dbGonderiler.some(x => x.id == id)) { toast("Bu gönderi akışta yüklü değil; görseli yukarıda gördün"); return; }
+  modalKapat();
+  gonderiDetay(id);
+}
+
+async function kayitliCikar(id) {
+  if (!sb || !st.kullanici) return;
+  const {data, error} = await sb.from("kaydedilenler").delete().eq("user_id", st.kullanici.id).eq("gonderi_id", Number(id)).select("gonderi_id");
+  if (error || !data || !data.length) { toast("Çıkarılamadı: " + (error ? error.message : "yetki yok")); return; }
+  modalKapat();
+  toast("Kaydedilenlerden çıkarıldı");
+  kaydedilenYukle();
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -2953,21 +3020,9 @@ async function dbKaydet(id) {
 }
 
 function kaydedilenlerAc() {
-  const liste = st.dbGonderiler.filter(g => st.kaydedilen.includes(g.id));
-  const icerik = liste.length
-    ? `<div class="grid grid-cols-3 gap-1">${liste.map(g => `
-         <div class="aspect-square rounded-lg overflow-hidden" style="background:${g.grad}">
-           ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
-         </div>`).join("")}</div>`
-    : `<p class="text-center text-slate-400 py-10">Henüz kaydettiğin bir gönderi yok. Gönderide 📑 simgesine dokun.</p>`;
-  modalAc(`
-    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-xl font-black">Kaydedilenler</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
-      </div>
-      ${icerik}
-    </div>`);
+  modalKapat();
+  st.sekme = 'profil';
+  profilSekme('kayit');
 }
 
 async function gonderiDetay(id) {
@@ -3626,6 +3681,10 @@ document.addEventListener('click', e => {
     case 'gonderiDuzenleKaydet': gonderiDuzenleKaydet(d.id); break;
     case 'begeniGizle': begeniGizle(d.id); break;
     case 'yorumKapat': yorumKapat(d.id); break;
+    case 'profilSekme': profilSekme(d.s); break;
+    case 'kayitliAc': kayitliAc(d.id); break;
+    case 'kayitliGor': kayitliGor(d.id); break;
+    case 'kayitliCikar': kayitliCikar(d.id); break;
     case 'gonderiSilMenu': modalKapat(); dbGonderiSil(d.id); break;
     case 'hikaye': {
       const h = st.hikayeler[+d.i];
