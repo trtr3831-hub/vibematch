@@ -645,98 +645,24 @@ async function hashle(s) {
   }
 }
 
-/* ---------- Hesaplar: e-posta ile kayıt ve giriş (bu tarayıcıda yerel) ---------- */
-function hesaplar() {
-  try { return JSON.parse(localStorage.getItem("vm_hesaplar") || "{}"); } catch (err) { return {}; }
-}
-function hesapKaydet(h) {
-  try { localStorage.setItem("vm_hesaplar", JSON.stringify(h)); return true; } catch (err) { return false; }
-}
-
-function girisYap(eposta) {
-  st.oturum = eposta;
-  try { localStorage.setItem("vm_oturum", eposta); } catch (err) {}
-  toast("Hoş geldin! 👋");
-  render();
-}
-
-function girisHTML() {
-  const kayitMi = st.authMod === "kayit";
-  const girdi = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
-  return `
-  <div class="giris pt-6 pb-6 space-y-5">
-    <div class="text-center">
-      <div class="text-5xl">💘</div>
-      <h2 class="text-2xl font-black neon mt-2">${t("giris_baslik")}</h2>
-      <p class="text-xs text-slate-400 mt-1">${t("giris_alt")}</p>
-    </div>
-    <div class="grid grid-cols-2 gap-2">
-      <button data-act="authSekme" data-m="giris" class="cip py-2.5 ${kayitMi ? "" : "secili"}">${t("giris_sekme")}</button>
-      <button data-act="authSekme" data-m="kayit" class="cip py-2.5 ${kayitMi ? "secili" : ""}">${t("kayit_sekme")}</button>
-    </div>
-    <div class="space-y-2">
-      <input id="authEposta" type="email" placeholder="${t("eposta")}" autocomplete="email" class="${girdi}">
-      <input id="authSifre" type="password" placeholder="${t("sifre")}" autocomplete="${kayitMi ? "new-password" : "current-password"}" class="${girdi}">
-      ${kayitMi ? `<div><label class="text-xs text-slate-400">${t("dogum")}</label><input id="authDogum" type="date" max="${enAzYasTarihi()}" class="${girdi} mt-1"></div>` : ""}
-      ${kayitMi ? `<input id="authSifreTekrar" type="password" placeholder="${t("sifre_tekrar")}" autocomplete="new-password" class="${girdi}">` : ""}
-      <button data-act="authGonder" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">${kayitMi ? t("gonder_kayit") : t("gonder_giris")}</button>
-      <p id="authMesaj" class="text-xs text-center min-h-[16px]"></p>
-    </div>
-    ${dilHTML()}
-  </div>`;
-}
-
-async function authGonder() {
-  const eposta = ($("#authEposta").value || "").trim().toLowerCase();
-  const sifre = $("#authSifre").value;
-  const msg = (t, ok) => {
-    const m = $("#authMesaj");
-    if (m) { m.textContent = cevir(t); m.className = "text-xs text-center min-h-[16px] " + (ok ? "text-emerald-400" : "text-rose-400"); }
-  };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return msg("Geçerli bir e-posta adresi gir.", false);
-  if (sifre.length < 6) return msg("Şifre en az 6 karakter olmalı.", false);
-  const h = hesaplar();
-  const sh = await hashle(sifre);
-  if (st.authMod === "kayit") {
-    const tekrarEl = $("#authSifreTekrar");
-    if (tekrarEl && tekrarEl.value !== sifre) return msg("Şifreler eşleşmiyor.", false);
-    const dogum = ($("#authDogum") || {}).value || "";
-    if (!dogum) return msg("Doğum tarihini gir.", false);
-    if (yasHesapla(dogum) < 18) return msg("Bu uygulama yalnızca 18 yaş ve üzeri kullanıcılar içindir.", false);
-    if (h[eposta]) return msg("Bu e-posta ile zaten kayıt var. Giriş yap sekmesini kullan.", false);
-    h[eposta] = sh;
-    if (!hesapKaydet(h)) return msg("Kayıt yapılamadı (tarayıcı depolaması kapalı).", false);
-    try {
-      const yaslar = JSON.parse(localStorage.getItem("vm_yaslar") || "{}");
-      yaslar[eposta] = dogum;
-      localStorage.setItem("vm_yaslar", JSON.stringify(yaslar));
-    } catch (err) {}
-  } else {
-    if (!h[eposta]) return msg("Bu e-posta ile kayıt bulunamadı.", false);
-    if (h[eposta] !== sh) return msg("Şifre yanlış.", false);
-  }
-  const askida = askidaListesi()[eposta];
-  if (askida) return msg("Hesabın askıya alındı. Gerekçe: " + askida.gerekce, false);
-  girisYap(eposta);
-}
-
-/* Giriş yapmış kişi kendi şifresini değiştirir */
+/* Giriş yapmış kişi kendi şifresini değiştirir (Supabase) */
 async function sifreKaydet() {
   const eski = $("#sifreEski");
   const yeni = $("#sifreYeni");
   const tekrar = $("#sifreTekrar");
   const msg = (t, ok) => {
     const m = $("#sifreMesaj");
-    if (m) { m.textContent = cevir(t); m.className = "text-xs mt-2 " + (ok ? "text-emerald-400" : "text-rose-400"); }
+    if (m) { m.textContent = t; m.className = "text-xs mt-2 " + (ok ? "text-emerald-400" : "text-rose-400"); }
   };
+  if (!sb || !st.kullanici) return msg("Önce giriş yapmalısın.", false);
   if (yeni.value.length < 6) return msg("Yeni şifre en az 6 karakter olmalı.", false);
   if (yeni.value !== tekrar.value) return msg("Yeni şifreler eşleşmiyor.", false);
-  const h = hesaplar();
-  if (await hashle(eski.value) !== h[st.oturum]) return msg("Mevcut şifre yanlış.", false);
-  h[st.oturum] = await hashle(yeni.value);
-  if (!hesapKaydet(h)) return msg("Şifre kaydedilemedi (tarayıcı depolaması kapalı).", false);
-  toast("Şifren değiştirildi ✅");
-  render();
+  const {error: eskiHata} = await sb.auth.signInWithPassword({email: st.kullanici.email, password: eski.value});
+  if (eskiHata) return msg("Mevcut şifre yanlış.", false);
+  const {error} = await sb.auth.updateUser({password: yeni.value});
+  if (error) return msg(hataMetni(error), false);
+  eski.value = ""; yeni.value = ""; tekrar.value = "";
+  msg("Şifren değiştirildi ✅", true);
 }
 
 function ayarlarHTML() {
@@ -1040,13 +966,8 @@ function adminOnay(t, islem) {
     kaydetObjeler("vm_askida", a);
     rapor.kapali = true;
   } else if (islem === "sil") {
-    const h = hesaplar();
-    delete h[hedef];
-    hesapKaydet(h);
-    const y = okuObje("vm_yaslar");
-    delete y[hedef];
-    kaydetObjeler("vm_yaslar", y);
-    rapor.kapali = true;
+    toast("Hesap silme Supabase panelinden yapılır.");
+    return;
   }
   kaydetListe("vm_sikayet", raporlar);
   denetimEkle({t: Date.now(), admin: st.oturum, islem, hedef: hedef || rapor.hedef, gerekce});
@@ -1446,7 +1367,7 @@ function rozetGuncelle() {
 function render() {
   const navEl = document.getElementById('nav');
   if (navEl) navEl.classList.toggle('hidden', !st.oturum);
-  if (!st.oturum) { document.getElementById('gorunum').innerHTML = girisHTML(); uygulaDil(); cevirDOM(document.getElementById('gorunum')); return; }
+  if (!st.oturum) { document.getElementById('gorunum').innerHTML = ''; return; }
   document.querySelectorAll('.sekme').forEach(b => b.setAttribute('aria-current', String(b.dataset.sekme === st.sekme)));
   rozetGuncelle();
   const arti = document.querySelector('[data-act="olusturAc"]');
@@ -2632,7 +2553,7 @@ async function istatistikAc() {
 /* ---------- Çoklu hesap (bu cihazda) ---------- */
 // Hesaplar bu cihazda saklanır; oturum belirteçleri yalnızca bu tarayıcıda tutulur
 function hesapListesi() {
-  try { return JSON.parse(localStorage.getItem("vm_hesaplar") || "[]") || []; } catch (err) { return []; }
+  try { const v = JSON.parse(localStorage.getItem("vm_hesaplar") || "[]"); return Array.isArray(v) ? v : []; } catch (err) { return []; }
 }
 
 function hesapYaz(liste) {
@@ -3259,6 +3180,7 @@ function girisEkraniGoster() { $('#girisEkrani').classList.remove('hidden'); }
 function oturumAc(user) {
   const ad = (user.user_metadata && user.user_metadata.ad) || 'Sen';
   st.kullanici = {id: user.id, email: user.email, ad};
+  st.oturum = user.email;
   BEN.ad = ad;
   BEN.yas = (user.user_metadata && user.user_metadata.yas) || BEN.yas;
   BEN.bio = (user.user_metadata && user.user_metadata.bio) || BEN.bio;
@@ -3299,6 +3221,7 @@ async function cikis() {
   if (st.kullanici) hesapSil(st.kullanici.id);
   if (sb) await sb.auth.signOut();
   st.kullanici = null;
+  st.oturum = null;
   BEN.ad = 'Sen';
   girisEkraniGoster();
   girisMesaj('', false);
@@ -4536,8 +4459,6 @@ document.addEventListener('click', e => {
     case 'yorumAc': st.acikYorum = st.acikYorum == d.id ? null : d.id; render(); break;
     case 'yorumGonder': yorumGonder(d.id); break;
     case 'profilFoto': fotoKurallari('profil'); break;
-    case 'authSekme': st.authMod = d.m; render(); break;
-    case 'authGonder': authGonder(); break;
     case 'cikis': cikis(); break;
     case 'sifreKaydet': sifreKaydet(); break;
     case 'tema': st.tema = d.t; temaUygula(); render(); break;
@@ -4683,10 +4604,6 @@ try {
   if (kayitli && Date.now() - kayitli.t < 864e5) st.not = kayitli;
 } catch (err) {}
 
-try {
-  const e = localStorage.getItem('vm_oturum');
-  if (e && hesaplar()[e] && !askidaListesi()[e]) st.oturum = e;
-} catch (err) {}
 try { st.engelli = okuListe("vm_engel").map(Number); } catch (err) { st.engelli = []; }
 try { st.dil = localStorage.getItem("vm_dil") || "tr"; } catch (err) { st.dil = "tr"; }
 st.gonderiler.forEach(g => { g.yorumlar = g.yorumlar || []; });
