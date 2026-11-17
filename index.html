@@ -237,6 +237,7 @@ const st = {
   dbHikayeler: [],
   gfFotolar: [],
   dbYanitAcik: null,
+  profilMap: {},
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -428,7 +429,7 @@ function gonderiHTML(g) {
 
 function akisHTML() {
   const son = sonHikaye();
-  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler, ...st.dbHikayeler.map(x => ({ad: x.ad, grad: x.grad, uid: x.uid, goruldu: false}))];
+  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler, ...st.dbHikayeler.map(x => ({ad: x.ad, grad: x.grad, uid: x.uid, goruldu: false, foto: (st.profilMap[x.uid] || {}).foto}))];
   const gonderiler = [
     ...st.benGonderiler.map(g => ({...g, benim: true})),
     ...st.gonderiler.filter(g => !engelliAd(g.yazar))
@@ -1834,6 +1835,7 @@ async function hikayeYukle() {
     const {data: pr} = await sb.from("profiles").select("id,ad").in("id", ids);
     (pr || []).forEach(p => { adlar[p.id] = p.ad; });
   }
+  await profilFotolariYukle(ids);
   st.dbHikayeler = ids.map(uid => ({uid: uid, ad: adlar[uid] || "Kullanıcı", grad: dbGrad(uid), hikayeler: gruplar[uid]}));
   if (st.sekme === "akis") render();
 }
@@ -2354,6 +2356,7 @@ function kirpKaydet() {
   const y = (400 - dh) / 2 + ky * Math.max(0, (dh - 400) / 2);
   c.getContext("2d").drawImage(img, x, y, dw, dh);
   st.benFoto = c.toDataURL("image/jpeg", 0.85);
+  profilDbKaydet();
   try { localStorage.setItem("vm_foto", st.benFoto); } catch (err) {}
   st.kirpResim = null;
   modalKapat();
@@ -2456,9 +2459,16 @@ async function profilDbKaydet() {
   if (!sb || !st.kullanici) return;
   const {error} = await sb.from("profiles").upsert({
     id: st.kullanici.id, ad: BEN.ad, yas: BEN.yas, bio: BEN.bio || "",
-    sehir: BEN.sehir, bolum: BEN.bolum, updated_at: new Date().toISOString(),
+    sehir: BEN.sehir, bolum: BEN.bolum, foto: st.benFoto || null, updated_at: new Date().toISOString(),
   });
   if (error) console.warn("profil kaydedilemedi", error.message);
+}
+
+async function profilFotolariYukle(ids) {
+  const benzersiz = [...new Set((ids || []).filter(Boolean))];
+  if (!sb || !benzersiz.length) return;
+  const {data} = await sb.from("profiles").select("id,ad,foto").in("id", benzersiz);
+  (data || []).forEach(p => { st.profilMap[p.id] = {ad: p.ad, foto: p.foto}; });
 }
 
 async function takipVerileriYukle() {
@@ -2590,6 +2600,7 @@ async function gonderiYukle() {
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
   }));
+  await profilFotolariYukle((gs || []).map(g => g.user_id));
   if (sb && st.kullanici) {
     const {data: kay} = await sb.from("kaydedilenler").select("gonderi_id").eq("user_id", benim);
     st.kaydedilen = (kay || []).map(k => k.gonderi_id);
@@ -2742,8 +2753,9 @@ async function dbYorumGonder(id) {
 
 function dbGonderiHTML(g) {
   const acik = st.dbAcikYorum == g.id;
-  const avatar = g.benim && st.benFoto
-    ? `<img src="${st.benFoto}" class="w-8 h-8 rounded-full object-cover">`
+  const fotoU = g.benim ? st.benFoto : (st.profilMap[g.sahip] || {}).foto;
+  const avatar = fotoU
+    ? `<img src="${fotoU}" class="w-8 h-8 rounded-full object-cover">`
     : `<div class="w-8 h-8 rounded-full" style="background:${g.grad}"></div>`;
   const listeFoto = (g.fotolar && g.fotolar.length) ? g.fotolar : (g.foto ? [g.foto] : []);
   const medya = listeFoto.length > 1
