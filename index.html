@@ -663,7 +663,6 @@ function mesajHTML() {
 function profilHTML() {
   const n = notGetir();
   const parca = SARKILAR[st.parca];
-  const toplamBegeni = st.benGonderiler.reduce((a, g) => a + g.begeni, 0);
   const notBaloncugu = n ? `<div class="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap max-w-[240px] truncate bg-white text-black text-xs font-semibold px-3 py-1.5 rounded-2xl">${esc(n.metin)}</div>` : "";
   const notKutusu = n ? `<div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center gap-2 mb-2">
                <span class="text-sm">${esc(n.metin)}</span>
@@ -702,8 +701,6 @@ function profilHTML() {
 
     ${oneCikanHTML()}
 
-    <div class="text-[11px] text-slate-500 mt-2">${st.gizlilik === "takipci" ? "🔒 Yalnızca takipçilere açık" : "🌐 Herkese açık"} · 🏆 ${puanHesapla()} puan · 💗 ${toplamBegeni} beğeni</div>
-    <div class="text-[11px] mt-1"><button data-act="profilFoto" class="text-cyan-300 underline">📷 Fotoğraf değiştir</button>${st.kullanici ? ` · <button data-act="cikis" class="text-rose-400 underline">Çıkış yap</button>` : ""}</div>
     ${notKutusu}
 
     <section class="mt-5">
@@ -714,14 +711,6 @@ function profilHTML() {
       </div>
       ${st.profilSekme === 'kayit' ? kayitliHTML() : profilGonderiHTML()}
     </section>
-
-    
-
-    
-
-    
-
-    
   </div>`;
 }
 
