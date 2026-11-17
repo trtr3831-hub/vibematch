@@ -103,6 +103,8 @@
   body:not(.acik) #aramaGiris::placeholder{color:#94a3b8}
   body.acik #aramaGiris{color:#0f172a}
   body.acik #aramaGiris::placeholder{color:#64748b}
+  /* Kapatma / geri düğmeleri: her zeminde görünür kapsül */
+  .kapat-tus,#modal [aria-label="Kapat"],#modal [aria-label="Geri"],#yorumPanel [aria-label="Kapat"]{display:inline-flex!important;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;min-width:2.25rem;border-radius:9999px!important;background:rgba(0,0,0,.62)!important;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.9);box-shadow:0 0 0 1px rgba(255,255,255,.4),0 2px 10px rgba(0,0,0,.55);font-size:1.15rem;line-height:1}
 </style>
 </head>
 <body>
@@ -111,18 +113,18 @@
     <div class="text-xl font-black neon">VibeMatch</div>
     <div class="flex items-center gap-2"><button data-act="olusturAc" class="w-8 h-8 mr-2 rounded-full bg-white text-black font-bold text-lg leading-none" aria-label="Oluştur">＋</button>
     <button data-act="sekme" data-sekme="mesajlar" class="relative mr-2 text-lg" aria-label="Mesajlar">✈️</button>
-    <button data-act="bildirimAc" class="relative mr-2 text-lg">🔔<span id="bildirimRozet" class="hidden absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
-    <button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
+        <button data-act="sekme" data-sekme="ayarlar" title="Ayarlar" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-sm">⚙️</button></div>
   </header>
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-6 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-7 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
     <button data-act="reelsAc" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🎬</span>Reels</button>
     <button data-act="sekme" data-sekme="ara" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔎</span>Ara</button>
     <button data-act="gonderiEkle" class="flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-label="Gönderi ekle"><span class="w-8 h-8 rounded-xl bg-white text-black font-black text-xl leading-none flex items-center justify-center">＋</span><span>Gönderi</span></button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
+    <button data-act="bildirimAc" class="relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-label="Bildirimler"><span class="ikon text-lg">🤍</span><span>Bildirim</span><span id="bildirimRozet" class="hidden absolute -top-1 right-2 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
   </nav>
 
@@ -1674,7 +1676,7 @@ function olusturAc() {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Ne paylaşmak istersin?</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <div class="space-y-3">
         ${secenek("reels", "🎬", "Reels", "Kısa video ya da fotoğraf, açıklama ve şarkıyla")}
@@ -2251,7 +2253,7 @@ function istekHTML() {
         ${i.foto ? `<img src="${i.foto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(i.uid)}">${esc((i.ad || "?")[0])}</div>`}
         <span class="flex-1 min-w-0 text-sm font-semibold text-white truncate">${esc(i.ad)}</span>
         <button data-act="istekKabul" data-id="${i.id}" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-xs shrink-0">Onayla</button>
-        <button data-act="istekReddet" data-id="${i.id}" class="px-3 py-1.5 rounded-full border border-white/30 text-white text-xs shrink-0">Sil</button>
+        <button data-act="istekReddet" data-id="${i.id}" class="px-3 py-1.5 rounded-full border border-white/30 text-white text-xs shrink-0">Reddet</button>
       </div>`).join("")}</div>
   </div>`;
 }
@@ -2293,6 +2295,29 @@ $('#hlKapakDosya').addEventListener('change', async e => {
   }
 });
 
+/* ---------- Bildirimler: zaman ve temizleme ---------- */
+// 2s, 1g gibi kısa zaman
+function zamanKisa(t) {
+  const dk = Math.floor((Date.now() - t) / 60000);
+  if (dk < 1) return "şimdi";
+  if (dk < 60) return dk + "dk";
+  const sa = Math.floor(dk / 60);
+  if (sa < 24) return sa + "s";
+  return Math.floor(sa / 24) + "g";
+}
+
+async function bildirimTemizleSunucu() {
+  if (sb && st.kullanici) {
+    const {error} = await sb.from("bildirimler").delete().eq("alici", st.kullanici.id);
+    if (error) { toast("Temizlenemedi: " + error.message); return; }
+  }
+  st.bildirimler = [];
+  bildirimKaydet();
+  bildirimRozetGuncelle();
+  modalKapat();
+  toast("Bildirimler temizlendi");
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -2329,7 +2354,7 @@ function gonderiDuzenle(id) {
     <div class="h-full bg-[#0d0818] p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-black">Gönderiyi düzenle</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <textarea id="duzMetin" maxlength="180" rows="5" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-cyan-400 resize-none">${esc(g.metin)}</textarea>
       <button data-act="gonderiDuzenleKaydet" data-id="${id}" class="w-full mt-3 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Kaydet</button>
@@ -2421,7 +2446,7 @@ function arsivCiz(ad) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Hikaye arşivi</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       ${icerik}
     </div>`);
@@ -2543,7 +2568,7 @@ function hlDuzenle(hid) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-black">Öne çıkarılanı düzenle</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <label class="text-xs text-slate-400">Ad</label>
       <div class="flex gap-2 mt-1 mb-5">
@@ -2612,7 +2637,7 @@ function hlKapakSec(hid) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-black">Kapak fotoğrafı</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <button data-act="hlKapakDosya" data-hid="${h.id}" class="w-full mb-5 py-3 rounded-xl bg-white/10 font-semibold text-sm text-white">📁 Galeriden fotoğraf seç</button>
       ${liste.length ? `<div class="grid grid-cols-3 gap-1">${liste.map(x => `
@@ -2921,7 +2946,7 @@ function profilGor(id) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris" data-kisi="${p.id}">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Profil</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <div class="flex flex-col items-center text-center">
         <div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black" style="background:${p.grad}">${esc(p.ad[0])}</div>
@@ -3059,9 +3084,10 @@ function bildirimEkle(metin) {
 
 async function bildirimYukle() {
   if (!sb || !st.kullanici) return;
-  const {data} = await sb.from("bildirimler").select("id,tur,metin,okundu,created_at").eq("alici", st.kullanici.id).order("created_at", {ascending: false}).limit(50);
+  const {data} = await sb.from("bildirimler").select("id,tur,metin,okundu,created_at,kimden").eq("alici", st.kullanici.id).order("created_at", {ascending: false}).limit(50);
   const yerel = st.bildirimler.filter(b => !b.db);
-  st.bildirimler = (data || []).map(b => ({db: true, id: b.id, metin: b.metin, s: zamanYaz(b.created_at), okundu: b.okundu, t: Date.parse(b.created_at)})).concat(yerel);
+  await profilFotolariYukle((data || []).map(b => b.kimden));
+  st.bildirimler = (data || []).map(b => ({db: true, id: b.id, tur: b.tur, kimden: b.kimden, metin: b.metin, s: zamanYaz(b.created_at), okundu: b.okundu, t: Date.parse(b.created_at)})).concat(yerel);
   bildirimRozetGuncelle();
   takipVerileriYukle();
 }
@@ -3071,18 +3097,23 @@ function bildirimAc() {
   st.bildirimler.forEach(b => { b.okundu = true; });
   bildirimKaydet();
   bildirimRozetGuncelle();
-  const liste = st.bildirimler.length
-    ? st.bildirimler.map(b => `<div class="p-3 rounded-xl bg-white/5 border border-white/10 flex justify-between gap-3 text-sm"><span>${esc(b.metin)}</span><span class="text-[10px] text-slate-500 whitespace-nowrap">${b.s}</span></div>`).join("")
-    : `<p class="text-center text-slate-400 py-10">Henüz bildirim yok.</p>`;
+  const satirlar = st.bildirimler.filter(b => b.tur !== "takip_istegi").map(b => {
+    const foto = b.kimden ? (st.profilMap[b.kimden] || {}).foto : null;
+    return `<div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+      ${foto ? `<img src="${foto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full shrink-0 bg-white/10 flex items-center justify-center text-sm font-black text-white">${esc((b.metin || "?")[0])}</div>`}
+      <span class="flex-1 min-w-0 text-sm text-white">${esc(b.metin)}</span>
+      <span class="text-[11px] text-slate-300 whitespace-nowrap">${b.t ? zamanKisa(b.t) : esc(b.s || "")}</span>
+    </div>`;
+  }).join("");
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
-      <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center gap-3 mb-5">
+        <button data-act="modalKapat" class="text-xl px-1 text-white" aria-label="Geri">←</button>
         <h2 class="text-xl font-black">Bildirimler</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
       </div>
       ${istekHTML()}
-      <div class="space-y-2">${liste}</div>
-      ${st.bildirimler.length ? '<button data-act="bildirimTemizle" class="mt-4 w-full py-2 rounded-full border border-white/20 text-sm">Hepsini temizle</button>' : ""}
+      <div class="space-y-2">${satirlar || '<p class="text-center text-slate-400 py-10">Henüz bildirim yok.</p>'}</div>
+      ${st.bildirimler.length ? '<button data-act="bildirimTemizle" class="mt-4 w-full py-2 rounded-full border border-white/20 text-sm text-white">Hepsini temizle</button>' : ""}
     </div>`);
 }
 
@@ -3113,7 +3144,7 @@ function kirpAc(dataUrl) {
       <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-black">Fotoğrafı ayarla</h2>
-          <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+          <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
         </div>
         <div class="flex justify-center mb-4">
           <canvas id="kirpCanvas" width="${KIRP_BOYUT}" height="${KIRP_BOYUT}" class="rounded-full border-2 border-cyan-400" style="width:${KIRP_BOYUT}px;max-width:100%;height:auto"></canvas>
@@ -3174,7 +3205,7 @@ function grupOlustur() {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Yeni grup</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <input id="grupAd" maxlength="30" placeholder="Grup adı (ör. Kütüphane ekibi)" class="w-full mb-4 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
       <p class="text-xs text-slate-400 mb-2">Eşleştiğin kişilerden seç:</p>
@@ -3326,7 +3357,7 @@ function notDuzenle() {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Notun (24 saat görünür)</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <div class="flex gap-2">
         <input id="notGiris" maxlength="60" placeholder="Ne düşünüyorsun? (60 karakter)" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
@@ -3464,7 +3495,7 @@ async function gonderiDetay(id) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-black">Gönderi</h2>
-        <span class="flex items-center gap-3"><button data-act="gonderiMenu" data-id="${g.id}" class="text-xl px-1" aria-label="Seçenekler">⋯</button><button data-act="modalKapat" class="text-slate-400 text-xl">✕</button></span>
+        <span class="flex items-center gap-3"><button data-act="gonderiMenu" data-id="${g.id}" class="text-xl px-1" aria-label="Seçenekler">⋯</button><button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button></span>
       </div>
       ${medya}
       ${g.metin && listeFoto.length ? `<p class="text-sm mt-3">${esc(g.metin)}</p>` : ""}
@@ -3562,7 +3593,7 @@ function reelGonderAc(reelId) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-black">Reels gönder</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <input id="reelAra" data-reel="${reelId}" placeholder="Kişi ara (en az 2 harf)" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
       <div id="reelAliciSonuc" class="mt-4"></div>
@@ -3913,7 +3944,7 @@ function profilDuzenleAc() {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Profili düzenle</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <div class="space-y-4">
         <div class="flex items-center gap-4">
@@ -4135,7 +4166,7 @@ document.addEventListener('click', e => {
     case 'istekReddet': takipIstegiReddet(d.id); break;
     case 'listeTakip': listeTakip(d.id, d.t); break;
     case 'bildirimAc': bildirimAc(); break;
-    case 'bildirimTemizle': st.bildirimler = []; bildirimKaydet(); bildirimRozetGuncelle(); modalKapat(); break;
+    case 'bildirimTemizle': bildirimTemizleSunucu(); break;
     case 'kirpKaydet': kirpKaydet(); break;
     case 'grupOlustur': grupOlustur(); break;
     case 'grupKaydet': grupKaydetIslem(); break;
