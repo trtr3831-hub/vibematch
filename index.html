@@ -88,6 +88,15 @@
   .acik #kart .bg-black\/50{background:rgba(0,0,0,.5) !important}
   .acik #kart .bg-black\/40{background:rgba(0,0,0,.4) !important}
   .acik #kart .cip{background:rgba(0,0,0,.35) !important}
+  /* Görünürlük standardı: koyu zeminlerde (modal, hikaye, reels) kontrol ikonları beyaz; açık temada koyu */
+  #modal button[data-act="modalKapat"],#modal button[data-act="oynatKapat"],#modal button[data-act="hlKapat"],#modal button[data-act="hlMenuAc"],#modal button[data-act="gonderiMenu"],#modal button[data-act="hikayeEkle"],#modal button[aria-label="Diğer"],#modal button[aria-label="Ses"],#modal button[aria-label="Kapat"],#modal button[aria-label="Geri"]{color:#fff!important}
+  #modal .text-slate-400,#modal .text-slate-500{color:#cbd5e1!important}
+  body:not(.acik) .text-slate-400{color:#e2e8f0}
+  body:not(.acik) .text-slate-500{color:#cbd5e1}
+  body.acik .text-slate-400{color:#334155}
+  body.acik #gorunum .text-white{color:#0f172a!important}
+  button[aria-label="Gönderi seçenekleri"]{color:#fff}
+  body.acik button[aria-label="Gönderi seçenekleri"]{color:#0f172a}
 </style>
 </head>
 <body>
@@ -3109,7 +3118,7 @@ async function gonderiDetay(id) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-black">Gönderi</h2>
-        <span class="flex items-center gap-3"><button data-act="gonderiMenu" data-id="${g.id}" class="text-xl px-1 text-slate-400" aria-label="Seçenekler">⋯</button><button data-act="modalKapat" class="text-slate-400 text-xl">✕</button></span>
+        <span class="flex items-center gap-3"><button data-act="gonderiMenu" data-id="${g.id}" class="text-xl px-1" aria-label="Seçenekler">⋯</button><button data-act="modalKapat" class="text-slate-400 text-xl">✕</button></span>
       </div>
       ${medya}
       ${g.metin && listeFoto.length ? `<p class="text-sm mt-3">${esc(g.metin)}</p>` : ""}
@@ -3201,7 +3210,7 @@ function dbGonderiHTML(g) {
             <div class="text-sm font-semibold truncate">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
             <div class="text-[11px] text-slate-400">${esc(g.sehir)} · ${g.zaman}</div>
           </div>
-          <button data-act="gonderiMenu" data-id="${g.id}" class="text-lg px-1 text-slate-400" aria-label="Gönderi seçenekleri">⋯</button>
+          <button data-act="gonderiMenu" data-id="${g.id}" class="text-lg px-1" aria-label="Gönderi seçenekleri">⋯</button>
         </header>
         <div class="rounded-xl overflow-hidden">${medya}</div>
         ${g.ses ? `<audio src="${g.ses}" controls loop autoplay class="w-full mt-2"></audio>` : ""}
