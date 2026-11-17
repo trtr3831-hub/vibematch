@@ -2101,11 +2101,13 @@ async function highlightYukle() {
   try { await sb.rpc("hikaye_arsivle"); } catch (err) {}
   const {data: arsiv} = await sb.from("hikayeler").select("id,foto,created_at,is_archived").eq("user_id", benim).order("created_at", {ascending: false}).limit(200);
   st.dbArsiv = arsiv || [];
-  const {data: hl, error} = await sb.from("highlights").select("id,ad,created_at,highlight_hikayeler(hikayeler(id,foto,created_at))").eq("user_id", benim).order("created_at", {ascending: true});
+  const {data: hl, error} = await sb.from("highlights").select("id,ad,created_at,kapak_hikaye_id,highlight_hikayeler(hikayeler(id,foto,created_at))").eq("user_id", benim).order("created_at", {ascending: true});
   if (error) return; // highlight tabloları henüz kurulmadıysa sessizce geç
   st.dbHighlight = (hl || []).map(h => ({
     id: h.id,
     ad: h.ad,
+    kapakId: h.kapak_hikaye_id,
+    kapakFoto: ((st.dbArsiv || []).find(x => x.id === h.kapak_hikaye_id) || {}).foto,
     hikayeler: (h.highlight_hikayeler || []).map(x => x.hikayeler).filter(Boolean)
       .map(s => ({id: s.id, foto: s.foto, t: s.created_at}))
       .sort((a, b) => (a.t < b.t ? -1 : 1)),
@@ -2119,7 +2121,7 @@ function oneCikanHTML() {
   if (!liste.length) return "";
   return `<div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">${liste.map((h, i) => `
     <button data-act="hlAc" data-i="${i}" class="flex flex-col items-center gap-1 shrink-0">
-      <span class="w-16 h-16 rounded-full overflow-hidden border border-white/20 bg-white/5">${h.hikayeler[0] ? `<img src="${h.hikayeler[0].foto}" class="w-full h-full object-cover">` : ""}</span>
+      <span class="w-16 h-16 rounded-full overflow-hidden border border-white/20 bg-white/5">${(h.kapakFoto || (h.hikayeler[0] && h.hikayeler[0].foto)) ? `<img src="${h.kapakFoto || h.hikayeler[0].foto}" class="w-full h-full object-cover">` : ""}</span>
       <span class="text-[10px] text-slate-400 w-16 truncate text-center">${esc(h.ad)}</span>
     </button>`).join("")}</div>`;
 }
@@ -2218,15 +2220,162 @@ function hlGoster() {
       <div class="absolute top-7 left-4 z-10 font-semibold">${esc(h.ad)}</div>
       <button data-act="hlGecis" data-y="-1" class="absolute left-0 top-0 bottom-24 w-1/3 z-0" aria-label="Önceki"></button>
       <button data-act="hlGecis" data-y="1" class="absolute right-0 top-0 bottom-24 w-2/3 z-0" aria-label="Sonraki"></button>
-      <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-10">
-        <button data-act="hlSil" data-id="${s.id}" class="px-4 py-2 rounded-full border border-rose-400 text-rose-300 text-sm">Bu hikayeyi çıkar</button>
-        <button data-act="hlKapat" class="px-4 py-2 rounded-full bg-white/10 text-sm">Kapat</button>
+        <button data-act="hlKapat" class="absolute top-7 right-3 z-10 text-xl px-2" aria-label="Kapat">✕</button>
+        <button data-act="hlMenuAc" data-hid="${h.id}" class="absolute bottom-6 right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-xl flex items-center justify-center" aria-label="Seçenekler">⋯</button>
       </div>
     </div>`);
   clearTimeout(st.hlZ);
   st.hlZ = setTimeout(() => {
     if (st.hlAcik && document.querySelector('[data-act="hlGecis"]')) hlGecis(1);
   }, 5000);
+}
+
+// Highlight'ı kimliğiyle bulur
+function hlBul(hid) {
+  return (st.dbHighlight || []).find(x => x.id == hid) || null;
+}
+
+// Alt sayfa (bottom sheet): Düzenle · Kapak · Sil
+function hlMenuAc(hid) {
+  const h = hlBul(hid);
+  if (!h) return;
+  clearTimeout(st.hlZ);
+  st.hlAcik = false;
+  modalAc(`
+    <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
+    <div class="absolute left-0 right-0 bottom-0 bg-[#0d0818] rounded-t-3xl p-5 pb-8 giris border-t border-white/10 space-y-2">
+      <div class="mx-auto w-10 h-1 rounded-full bg-white/20 mb-3"></div>
+      <p class="text-center text-sm font-bold">${esc(h.ad)}</p>
+      <button data-act="hlDuzenle" data-hid="${h.id}" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">✏️ Öne çıkarılanı düzenle</button>
+      <button data-act="hlKapakSec" data-hid="${h.id}" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">🖼️ Kapak fotoğrafını değiştir</button>
+      <button data-act="hlSilTum" data-hid="${h.id}" class="w-full py-3 rounded-xl border border-rose-400 text-rose-300 font-semibold text-sm">🗑️ Sil (hikayeler arşivde kalır)</button>
+      <button data-act="modalKapat" class="w-full py-2 text-sm text-slate-400">Vazgeç</button>
+    </div>`);
+}
+
+// Basılı tutma: profildeki çemberde 500 ms
+let hlBasiliZ = null;
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest('[data-act="hlAc"]');
+  if (!el) return;
+  st.hlUzun = false;
+  clearTimeout(hlBasiliZ);
+  hlBasiliZ = setTimeout(() => {
+    st.hlUzun = true;
+    const h = (st.dbHighlight || [])[+el.dataset.i];
+    if (h) hlMenuAc(h.id);
+  }, 500);
+});
+["pointerup", "pointercancel"].forEach(t => document.addEventListener(t, () => clearTimeout(hlBasiliZ)));
+
+// Düzenleme: ad, hikaye ekle/çıkar
+function hlDuzenle(hid) {
+  const h = hlBul(hid);
+  if (!h) return;
+  const dahil = new Set(h.hikayeler.map(x => x.id));
+  const disarda = (st.dbArsiv || []).filter(x => !dahil.has(x.id));
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-black">Öne çıkarılanı düzenle</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <label class="text-xs text-slate-400">Ad</label>
+      <div class="flex gap-2 mt-1 mb-5">
+        <input id="hlAdDuz" maxlength="30" value="${esc(h.ad)}" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
+        <button data-act="hlAdKaydet" data-hid="${h.id}" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Kaydet</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-2">Bu öne çıkarılandaki hikayeler (${h.hikayeler.length})</p>
+      <div class="grid grid-cols-3 gap-1 mb-5">${h.hikayeler.map(x => `
+        <div class="relative aspect-[9/16] rounded-lg overflow-hidden">
+          <img src="${x.foto}" class="w-full h-full object-cover">
+          <button data-act="hlCikar" data-hid="${h.id}" data-id="${x.id}" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-xs" aria-label="Çıkar">✕</button>
+        </div>`).join("")}</div>
+      <p class="text-xs text-slate-400 mb-2">Eklenebilecek hikayeler</p>
+      ${disarda.length ? `<div class="grid grid-cols-3 gap-1">${disarda.map(x => `
+        <button data-act="hlEkle" data-hid="${h.id}" data-id="${x.id}" class="aspect-[9/16] rounded-lg overflow-hidden"><img src="${x.foto}" class="w-full h-full object-cover"></button>`).join("")}</div>`
+        : `<p class="text-xs text-slate-500">Arşivde eklenebilecek başka hikaye yok.</p>`}
+    </div>`);
+}
+
+async function hlAdKaydet(hid) {
+  if (!sb || !st.kullanici) return;
+  const ad = ((document.getElementById("hlAdDuz") || {}).value || "").trim().slice(0, 30);
+  if (!ad) { toast("Ad boş olamaz"); return; }
+  const {data, error} = await sb.from("highlights").update({ad}).eq("id", hid).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Kaydedilemedi: " + (error ? error.message : "yetki yok")); return; }
+  toast("Ad güncellendi ✏️");
+  await highlightYukle();
+  hlDuzenle(hid);
+  render();
+}
+
+// Hikaye çıkar; son hikaye de çıkarılırsa öne çıkarılan silinir
+async function hlCikar(hid, sid) {
+  if (!sb || !st.kullanici) return;
+  const {error} = await sb.from("highlight_hikayeler").delete().eq("highlight_id", Number(hid)).eq("hikaye_id", Number(sid));
+  if (error) { toast("Çıkarılamadı: " + error.message); return; }
+  const {data: kalan} = await sb.from("highlight_hikayeler").select("hikaye_id").eq("highlight_id", Number(hid));
+  if (!kalan || !kalan.length) {
+    await sb.from("highlights").delete().eq("id", Number(hid)).eq("user_id", st.kullanici.id);
+    await highlightYukle();
+    modalKapat();
+    toast("Öne çıkarılan silindi");
+    render();
+    return;
+  }
+  await highlightYukle();
+  hlDuzenle(hid);
+  render();
+}
+
+async function hlEkle(hid, sid) {
+  if (!sb || !st.kullanici) return;
+  const {error} = await sb.from("highlight_hikayeler").upsert([{highlight_id: Number(hid), hikaye_id: Number(sid)}], {onConflict: "highlight_id,hikaye_id", ignoreDuplicates: true});
+  if (error) { toast("Eklenemedi: " + error.message); return; }
+  await highlightYukle();
+  hlDuzenle(hid);
+  render();
+}
+
+// Kapak: arşivdeki herhangi bir hikaye
+function hlKapakSec(hid) {
+  const h = hlBul(hid);
+  if (!h) return;
+  const liste = st.dbArsiv || [];
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-black">Kapak fotoğrafı</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      ${liste.length ? `<div class="grid grid-cols-3 gap-1">${liste.map(x => `
+        <button data-act="hlKapakKaydet" data-hid="${h.id}" data-id="${x.id}" class="relative aspect-[9/16] rounded-lg overflow-hidden">
+          <img src="${x.foto}" class="w-full h-full object-cover">
+          ${h.kapakId == x.id ? `<span class="absolute top-1 left-1 text-[10px] bg-cyan-400 text-black font-bold px-1 rounded">Kapak</span>` : ""}
+        </button>`).join("")}</div>` : `<p class="text-center text-slate-400 py-10">Kapak için hikaye yok.</p>`}
+    </div>`);
+}
+
+async function hlKapakKaydet(hid, sid) {
+  if (!sb || !st.kullanici) return;
+  const {data, error} = await sb.from("highlights").update({kapak_hikaye_id: Number(sid)}).eq("id", Number(hid)).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Kapak kaydedilemedi: " + (error ? error.message : "yetki yok")); return; }
+  toast("Kapak güncellendi 🖼️");
+  await highlightYukle();
+  modalKapat();
+  render();
+}
+
+async function hlSilTum(hid) {
+  if (!sb || !st.kullanici) return;
+  if (!confirm("Bu öne çıkarılan silinsin mi? Hikayeler arşivde kalır.")) return;
+  const {data, error} = await sb.from("highlights").delete().eq("id", Number(hid)).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Silinemedi: " + (error ? error.message : "yetki yok")); return; }
+  modalKapat();
+  toast("Öne çıkarılan silindi");
+  await highlightYukle();
+  render();
 }
 
 function hlGecis(y) {
@@ -2246,27 +2395,6 @@ function hlKapat() {
 }
 
 // Hikayeyi highlight'tan çıkar; kalmazsa highlight'ı da sil
-async function hlSil(id) {
-  const h = (st.dbHighlight || [])[st.hlAktif];
-  if (!h || !sb) return;
-  const {error} = await sb.from("highlight_hikayeler").delete().eq("highlight_id", h.id).eq("hikaye_id", Number(id));
-  if (error) { toast("Çıkarılamadı: " + error.message); return; }
-  await highlightYukle();
-  const yeni = (st.dbHighlight || []).find(x => x.id === h.id);
-  if (!yeni) {
-    const {error: e2} = await sb.from("highlights").delete().eq("id", h.id);
-    if (e2) toast("Highlight silinemedi: " + e2.message);
-    hlKapat();
-    toast("Highlight kaldırıldı");
-    render();
-    return;
-  }
-  st.hlAktif = (st.dbHighlight || []).indexOf(yeni);
-  if (st.hlSira >= yeni.hikayeler.length) st.hlSira = yeni.hikayeler.length - 1;
-  toast("Hikaye highlight'tan çıkarıldı");
-  render();
-  hlGoster();
-}
 
 /* Gönderi için şarkı dosyası seçimi */
 document.addEventListener('change', e => {
@@ -3777,9 +3905,16 @@ document.addEventListener('click', e => {
     case 'arsivAc': arsivAc(); break;
     case 'arsivSec': arsivSec(d.id); break;
     case 'arsivEkle': arsivEkle(); break;
-    case 'hlAc': highlightAc(+d.i); break;
+    case 'hlAc': if (st.hlUzun) { st.hlUzun = false; break; } highlightAc(+d.i); break;
+    case 'hlMenuAc': hlMenuAc(d.hid); break;
+    case 'hlDuzenle': hlDuzenle(d.hid); break;
+    case 'hlAdKaydet': hlAdKaydet(d.hid); break;
+    case 'hlCikar': hlCikar(d.hid, d.id); break;
+    case 'hlEkle': hlEkle(d.hid, d.id); break;
+    case 'hlKapakSec': hlKapakSec(d.hid); break;
+    case 'hlKapakKaydet': hlKapakKaydet(d.hid, d.id); break;
+    case 'hlSilTum': hlSilTum(d.hid); break;
     case 'hlGecis': hlGecis(+d.y); break;
-    case 'hlSil': hlSil(d.id); break;
     case 'hlKapat': hlKapat(); break;
     case 'ayarlar': st.sekme = 'ayarlar'; render(); break;
     case 'profilDuzenle': profilDuzenleAc(); break;
