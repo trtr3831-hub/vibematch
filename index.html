@@ -241,6 +241,8 @@ const st = {
   dbHikayeler: [],
   dbArsiv: [],
   dbHighlight: [],
+  benGonderiSayi: 0,
+  takipciMap: {},
   vBegeniGizli: false,
   profilSekme: 'gonderi',
   dbKayitli: [],
@@ -310,56 +312,6 @@ function avatar(p, boyut) {
   return `<div class="${boyut} rounded-full flex items-center justify-center font-black shrink-0" style="background:${p.grad}">${esc(p.ad[0])}</div>`;
 }
 
-function kesfetHTML() {
-  const p = st.deste[st.sira];
-  if (!p) return `
-    <div class="h-full flex flex-col items-center justify-center text-center gap-4 giris">
-      <div class="text-6xl">🌙</div>
-      <h2 class="text-2xl font-bold">Şimdilik bu kadar</h2>
-      <p class="text-slate-400 text-sm">Yeni profiller için biraz sonra tekrar bak.</p>
-      <button data-act="yenile" class="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Keşfi yenile</button>
-    </div>`;
-  const ort = ortakIlgi(p);
-  const m = SARKILAR[p.sarki];
-  return `
-  <div class="pt-1 giris">
-    <div class="flex justify-between items-center mb-3 text-xs text-slate-400">
-      <span>${st.sira + 1}/${st.deste.length}</span>
-      <button data-act="aramaAc" class="px-3 py-1 rounded-full border border-white/20 text-xs">🔎 Kişi ara</button>
-    </div>
-    <div id="kart" class="relative h-[56vh] min-h-[360px] rounded-3xl overflow-hidden select-none touch-none cursor-grab shadow-2xl" style="background:${p.grad}">
-      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none"></div>
-      <div class="absolute inset-0 flex items-center justify-center text-[120px] font-black opacity-20 pointer-events-none">${esc(p.ad[0])}</div>
-      <div class="absolute top-4 left-4 flex gap-2 flex-wrap">
-        <span class="cip bg-black/40">📍 ${esc(p.sehir)}${p.sehir === ESK ? ' ✓' : ''}</span>
-        <span class="cip bg-black/40">${esc(p.vibe)}</span>
-      </div>
-      <div id="dmg-sag" class="absolute top-6 right-6 rotate-12 border-4 border-emerald-400 text-emerald-400 font-black text-3xl px-3 rounded-lg opacity-0 pointer-events-none">BEĞEN</div>
-      <div id="dmg-sol" class="absolute top-6 left-6 -rotate-12 border-4 border-rose-500 text-rose-500 font-black text-3xl px-3 rounded-lg opacity-0 pointer-events-none">GEÇ</div>
-      <div class="absolute bottom-0 left-0 right-0 p-5 space-y-2">
-        <h2 class="text-3xl font-black">${esc(p.ad)}, ${p.yas}</h2>
-        <button data-act="profilGor" data-id="${p.id}" class="text-xs text-cyan-300 underline text-left">👤 Profili gör · ${takipciSayisi(p)} takipçi</button>
-        <p class="text-sm text-slate-200">🎓 ${esc(p.bolum)}</p>
-        <p class="text-sm text-slate-300">${esc(p.bio)}</p>
-        <div class="flex flex-wrap gap-1.5 pt-1">${p.ilgi.map(i => `<span class="cip ${ort.includes(i) ? 'ortak' : ''}">${esc(i)}</span>`).join('')}</div>
-        <div class="flex items-center gap-3 bg-black/50 rounded-2xl px-3 py-2 mt-2">
-          <button data-act="kartmuzik" class="w-9 h-9 rounded-full bg-white text-black font-bold shrink-0">${st.kartCalan ? '❚❚' : '▶'}</button>
-          <div class="eq ${st.kartCalan ? 'cal' : ''}"><span></span><span></span><span></span><span></span></div>
-          <div class="text-xs min-w-0">
-            <div class="font-semibold truncate">🎵 ${esc(m.b)}</div>
-            <div class="text-slate-400 truncate">${esc(m.s)}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="flex justify-center items-center gap-6 mt-5">
-      <button data-act="gec" class="w-16 h-16 rounded-full bg-white/10 border border-rose-500/50 text-rose-400 text-2xl">✖</button>
-      <button data-act="begen" class="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-3xl parla">💗</button>
-    </div>
-    <div class="flex justify-center gap-4 mt-3 text-xs"><button data-act="sikayetAc" data-tur="kisi" data-id="${p.id}" data-ad="${esc(p.ad)}" class="text-slate-400">🚩 Şikayet et</button><button data-act="engelleAc" data-id="${p.id}" class="text-slate-400">🚫 Engelle</button></div>
-    <p class="text-center text-[11px] text-slate-500 mt-4">Kartı sağa kaydır: beğen · sola kaydır: geç</p>
-  </div>`;
-}
 
 function sonHikaye() {
   return st.benHikayeler.length ? st.benHikayeler[st.benHikayeler.length - 1].foto : null;
@@ -647,7 +599,7 @@ function profilHTML() {
         </div>
       </div>
       <div class="flex-1 grid grid-cols-3 text-center">
-        <div><div class="font-black text-lg">${st.benGonderiler.length}</div><div class="text-[11px] text-slate-400">gönderi</div></div>
+        <div><div class="font-black text-lg">${st.benGonderiSayi}</div><div class="text-[11px] text-slate-400">gönderi</div></div>
         <button data-act="takipListe" data-t="takipci"><div class="font-black text-lg">${takipciBen()}</div><div class="text-[11px] text-slate-400">takipçi</div></button>
         <button data-act="takipListe" data-t="takip"><div class="font-black text-lg">${st.takipEdilen.length}</div><div class="text-[11px] text-slate-400">takip</div></button>
       </div>
@@ -2629,7 +2581,13 @@ function takipKaydet() {
 
 /* Şimdilik yalnızca bu cihazdaki takipler sayılır; gerçek takipçi sayısı veritabanıyla gelecek */
 function takipciSayisi(p) {
-  return st.takipEdilen.includes(p.id) ? 1 : 0;
+  return (st.takipciMap || {})[p.id] || 0;
+}
+
+async function takipciYukleKisi(id) {
+  const {count} = await sb.from("takipler").select("*", {count: "exact", head: true}).eq("takip_edilen_id", id);
+  st.takipciMap[id] = count || 0;
+  if (document.querySelector('[data-act="takipToggle"][data-id="' + id + '"]')) profilGor(id);
 }
 
 function takipciBen() {
@@ -2639,6 +2597,7 @@ function takipciBen() {
 function profilGor(id) {
   const p = kisi(id);
   if (!p) return;
+  if (sb && st.kullanici && st.dbProfiller[p.id] && !(p.id in st.takipciMap)) takipciYukleKisi(p.id);
   const takipte = st.takipEdilen.includes(p.id);
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
@@ -2680,6 +2639,7 @@ async function await_takip_ekle(id) {
   await sb.from("bildirimler").insert({alici: id, tur: "takip", metin: BEN.ad + " seni takip etmeye başladı"});
   toast("Takip ediliyor ✅");
   await takipVerileriYukle();
+  delete st.takipciMap[id];
   profilGor(id);
 }
 
@@ -2688,6 +2648,7 @@ async function await_takip_sil(id) {
   if (error) return toast("Takipten çıkılamadı: " + error.message);
   toast("Takipten çıkıldı");
   await takipVerileriYukle();
+  delete st.takipciMap[id];
   profilGor(id);
 }
 
@@ -2744,6 +2705,7 @@ async function bildirimYukle() {
   const yerel = st.bildirimler.filter(b => !b.db);
   st.bildirimler = (data || []).map(b => ({db: true, id: b.id, metin: b.metin, s: zamanYaz(b.created_at), okundu: b.okundu, t: Date.parse(b.created_at)})).concat(yerel);
   bildirimRozetGuncelle();
+  takipVerileriYukle();
 }
 
 function bildirimAc() {
@@ -2948,7 +2910,7 @@ async function takipVerileriYukle() {
   st.takipEdilen = (data || []).map(r => r.takip_edilen_id);
   const {count} = await sb.from("takipler").select("*", {count: "exact", head: true}).eq("takip_edilen_id", benim);
   st.takipciSayi = count || 0;
-  render();
+  if (st.sekme === 'profil') render();
 }
 
 function aramaAc() {
@@ -3073,6 +3035,8 @@ async function gonderiYukle() {
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
   }));
+  const {count: benimSayi} = await sb.from("gonderiler").select("id", {count: "exact", head: true}).eq("user_id", benim);
+  st.benGonderiSayi = benimSayi || 0;
   await profilFotolariYukle((gs || []).map(g => g.user_id));
   if (sb && st.kullanici) {
     const {data: kay} = await sb.from("kaydedilenler").select("gonderi_id").eq("user_id", benim);
