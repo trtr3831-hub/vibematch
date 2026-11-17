@@ -26,8 +26,6 @@
   @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
   .halka{padding:2.5px;border-radius:999px;background:linear-gradient(45deg,var(--altin),var(--pembe),#7c3aed)}
   .halka.goruldu{background:#3b2a5c}
-  .cubuk{height:3px;background:#ffffff40;border-radius:9px;overflow:hidden}
-  .cubuk>i{display:block;height:100%;width:0;background:#fff}
   .eq{display:flex;align-items:flex-end;gap:2px;height:16px}
   .eq span{width:3px;height:4px;background:var(--cyan);border-radius:2px}
   .eq.cal span{animation:eq .9s ease-in-out infinite}
@@ -63,8 +61,6 @@
   body.acik .sekme[aria-current="true"]{color:#0891b2;text-shadow:none}
   body.acik .cip{border-color:rgba(0,0,0,.15);background:rgba(0,0,0,.03)}
   body.acik .cip.secili{color:#0891b2;border-color:#0891b2;box-shadow:none}
-  body.acik .cubuk{background:rgba(0,0,0,.12)}
-  body.acik .cubuk>i{background:#1a1530}
   body.acik .eq span{background:#0891b2}
   body.acik #toast{background:#1a1530;color:#fff}
   body.acik .ortak{color:#1a1530}
@@ -87,8 +83,6 @@
   .acik .cip{background:rgba(0,0,0,.03)}
   .acik .cip.secili{color:#0a7d94 !important;border-color:#0a7d94}
   .acik .ortak{color:#1b1530 !important;background:linear-gradient(90deg,#ff2e8833,#00e5ff33)}
-  .acik .cubuk{background:rgba(0,0,0,.12)}
-  .acik .cubuk>i{background:#1b1530}
   .acik .eq span{background:#0a7d94}
   .acik #kart,.acik #kart *{color:#fff !important}
   .acik #kart .bg-black\/50{background:rgba(0,0,0,.5) !important}
@@ -215,7 +209,6 @@ const st = {
   okunmamis: {},
   sohbetId: null,
   vibe: VIBELAR[0],
-  benHikayeler: [],
   acikYorum: null,
   bekleyenFoto: null,
   benFoto: null,
@@ -241,6 +234,7 @@ const st = {
   dbHikayeler: [],
   dbArsiv: [],
   dbHighlight: [],
+  hbBegenen: {},
   benGonderiSayi: 0,
   takipciMap: {},
   vBegeniGizli: false,
@@ -254,8 +248,6 @@ const st = {
   gfFotolar: [],
   dbYanitAcik: null,
   profilMap: {},
-  arsiv: [],
-  oneCikanlar: [],
   dbMesajlar: [],
   gizlilik: "herkes",
   kirpResim: null,
@@ -265,12 +257,6 @@ const st = {
   sikayetHedef: null,
   fotoHedef: "profil",
   authMod: "giris",
-  hikayeler: [
-    {ad:'Elif',   grad:GRAD[0], metin:'Porsuk kenarı, sabah kahvesi ☕', goruldu:false, t: Date.now()},
-    {ad:'Mert',   grad:GRAD[1], metin:'Halı saha perşembe 😎', goruldu:false, t: Date.now()},
-    {ad:'Zeynep', grad:GRAD[4], metin:'Maket bitti, şimdi uyku 🛌', goruldu:false, t: Date.now()},
-    {ad:'Defne',  grad:GRAD[2], metin:'Yeni podcast bölümü çıktı 🎙️', goruldu:false, t: Date.now()}
-  ],
   gonderiler: [
     {id:1, yazar:'Mert',   sehir:ESK, metin:'Vapurda gün batımı… Eskişehir bugün başka güzel 🌅', grad:GRAD[2], begeni:42, begendim:false, zaman:'12 dk önce'},
     {id:2, yazar:'Zeynep', sehir:ESK, metin:'Kütüphane sınavı bitti! Kim kahve ister? ☕',       grad:GRAD[3], begeni:27, begendim:false, zaman:'40 dk önce'},
@@ -284,7 +270,6 @@ const st = {
   kartCalan: false,
   not: null,
   toastZ: null,
-  hikayeZ: null
 };
 
 
@@ -313,18 +298,8 @@ function avatar(p, boyut) {
 }
 
 
-function sonHikaye() {
-  return st.benHikayeler.length ? st.benHikayeler[st.benHikayeler.length - 1].foto : null;
-}
 
 /* 24 saatten eski hikayeleri kaldirir; degisiklik olduysa true doner */
-function hikayeleriTemizle() {
-  const onceki = st.benHikayeler.length + st.hikayeler.length;
-  const sinir = Date.now() - 864e5;
-  st.benHikayeler = st.benHikayeler.filter(h => h.t > sinir);
-  st.hikayeler = st.hikayeler.filter(h => h.t > sinir);
-  return onceki !== st.benHikayeler.length + st.hikayeler.length;
-}
 
 function yorumlarHTML(g) {
   if (st.acikYorum != g.id) return "";
@@ -389,8 +364,7 @@ function gonderiHTML(g) {
 }
 
 function akisHTML() {
-  const son = sonHikaye();
-  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler, ...st.dbHikayeler.map(x => ({ad: x.ad, grad: x.grad, uid: x.uid, goruldu: false, foto: (st.profilMap[x.uid] || {}).foto}))];
+  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: aktifHikayeler().length > 0}, ...st.dbHikayeler.map(x => ({ad: x.ad, grad: x.grad, uid: x.uid, goruldu: false, foto: (st.profilMap[x.uid] || {}).foto}))];
   const gonderiler = [
     ...st.benGonderiler.map(g => ({...g, benim: true})),
     ...st.gonderiler.filter(g => !engelliAd(g.yazar))
@@ -399,7 +373,7 @@ function akisHTML() {
   <div class="giris">
     <div class="kaydir overflow-x-auto flex gap-4 py-3 -mx-4 px-4">
       ${hikayeler.map((h, i) => `
-        <button data-act="${h.benim ? "hikayeben" : (h.uid ? "dbHikaye" : "hikaye")}" data-i="${i - 1}" data-id="${h.uid || ""}" class="flex flex-col items-center gap-1 shrink-0">
+        <button data-act="${h.benim ? "hikayeben" : "dbHikaye"}" data-id="${h.uid || ""}" class="flex flex-col items-center gap-1 shrink-0">
           <div class="halka ${!h.benim && h.goruldu ? "goruldu" : ""}">
             <div class="w-16 h-16 rounded-full border-2 border-[#0d0818] overflow-hidden relative flex items-center justify-center font-black text-xl" style="background:${h.grad}">
               ${h.foto ? `<img src="${h.foto}" class="absolute inset-0 w-full h-full object-cover">` : ""}
@@ -1569,48 +1543,22 @@ function eslesmeModal(p) {
 }
 
 /* ---------- Hikayeler ---------- */
-function hikayeAc(h) {
-  modalAc(`
-    <div data-act="hikayeKapat" class="w-full h-full bg-black flex items-center justify-center cursor-pointer">
-      <div class="relative w-full h-full overflow-hidden" style="background:${h.grad}">
-        ${h.foto ? `<img src="${h.foto}" class="absolute inset-0 w-full h-full object-cover">` : ''}
-        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30"></div>
-        <div class="absolute top-3 left-3 right-3 cubuk"><i id="hikayeCubuk"></i></div>
-        <div class="absolute top-6 left-4 flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full" style="background:${h.grad}"></div>
-          <span class="font-semibold">${esc(h.ad)}</span>
-        </div>
-        <p class="absolute bottom-12 left-5 right-5 text-2xl font-bold">${esc(h.metin || '')}</p>
-      </div>
-    </div>`);
-  requestAnimationFrame(() => {
-    const c = $('#hikayeCubuk');
-    if (c) { c.style.transition = 'width 5s linear'; c.style.width = '100%'; }
-  });
-  clearTimeout(st.hikayeZ);
-  st.hikayeZ = setTimeout(hikayeKapat, 5000);
-}
 
-function hikayeKapat() {
-  clearTimeout(st.hikayeZ);
-  modalKapat();
-  render();
-}
 
 $('#hikayeDosya').addEventListener('change', e => {
   const f = e.target.files[0];
+  e.target.value = '';
   if (!f) return;
+  if (!sb || !st.kullanici) { toast('Hikaye için giriş yapmalısın'); return; }
   const r = new FileReader();
-  r.onload = () => {
-    st.benHikayeler.push({foto: r.result, t: Date.now()});
-    st.arsiv.unshift({foto: r.result, t: Date.now()});
-    arsivKaydet();
-    if (sb && st.kullanici) sb.from("hikayeler").insert({foto: r.result}).then(() => { hikayeYukle(); highlightYukle(); });
+  r.onload = async () => {
+    const {error} = await sb.from('hikayeler').insert({foto: r.result});
+    if (error) { toast('Hikaye yüklenemedi: ' + error.message); return; }
     toast('Hikayen yayında! 🎉');
+    await Promise.all([hikayeYukle(), highlightYukle()]);
     render();
   };
   r.readAsDataURL(f);
-  e.target.value = '';
 });
 
 /* ---------- Sohbet ---------- */
@@ -1780,10 +1728,11 @@ async function hikayeYukle() {
 /* ---------- Hikaye oynatıcı: birden fazla hikaye, ilerleme çubuğu, dokunarak geçiş ---------- */
 function dbHikayeAc(uid) { oynatAc(uid, st.dbHikayeler); }
 
-function oynatAc(uid, gruplar) {
+async function oynatAc(uid, gruplar) {
   const liste = gruplar || st.dbHikayeler;
   const bas = liste.findIndex(g => g.uid == uid);
   if (bas < 0 || !liste[bas].hikayeler.length) return;
+  await hikayeBegeniYukle(liste.flatMap(g => g.hikayeler.map(x => x.id)));
   st.oyn = {gruplar: liste, g: bas, s: 0};
   oynatGoster();
 }
@@ -1804,9 +1753,11 @@ function oynatGoster() {
         <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-black" style="background:${grup.grad}">${avatarFoto ? `<img src="${avatarFoto}" class="w-full h-full object-cover">` : esc((grup.ad || "?")[0])}</div>
         <span class="font-semibold text-sm truncate">${esc(grup.ad)}</span>
         <span class="text-[11px] text-slate-300">${zamanYaz(s.created_at)}</span>
-        <button data-act="oynatKapat" class="ml-auto text-xl px-2" aria-label="Kapat">✕</button>
+        ${grup.uid == (st.kullanici && st.kullanici.id) ? '<button data-act="hikayeEkle" class="ml-auto text-xl px-2" aria-label="Yeni hikaye">＋</button>' : ""}
+        <button data-act="oynatKapat" class="${grup.uid == (st.kullanici && st.kullanici.id) ? "" : "ml-auto "}text-xl px-2" aria-label="Kapat">✕</button>
       </div>
-      ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<div class="absolute bottom-5 left-3 right-3 z-20 flex gap-2"><input id="oynatYanit" maxlength="120" placeholder="Hikayeye yanıt yaz…" onfocus="clearTimeout(st.oynZ)" class="flex-1 bg-black/40 border border-white/20 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400"><button data-act="oynatYanitGonder" data-id="${grup.uid}" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Gönder</button></div>`}
+      ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<div class="absolute bottom-5 left-3 right-16 z-20 flex gap-2"><input id="oynatYanit" maxlength="120" placeholder="Hikayeye yanıt yaz…" onfocus="clearTimeout(st.oynZ)" class="flex-1 bg-black/40 border border-white/20 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400"><button data-act="oynatYanitGonder" data-id="${grup.uid}" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Gönder</button></div>`}
+      ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<button id="hbKalp" data-act="hbToggle" data-id="${s.id}" class="kalp absolute right-3 bottom-5 z-20 w-11 h-11 rounded-full bg-black/40 text-2xl flex items-center justify-center" aria-label="Beğen">${st.hbBegenen[s.id] ? "❤️" : "🤍"}</button>`}
       <button data-act="oynatGeri" class="absolute left-0 top-20 bottom-0 w-1/3 z-0" aria-label="Önceki hikaye"></button>
       <button data-act="oynatIleri" class="absolute right-0 top-20 bottom-0 w-2/3 z-0" aria-label="Sonraki hikaye"></button>
     </div>`);
@@ -1845,25 +1796,7 @@ function oynatKapat() {
 }
 
 // Kendi hikayene dokununca: yeni ekle veya aktif hikayelerini izle
-function hikayeMenu() {
-  modalAc(`
-    <div class="h-full bg-[#0d0818] p-6 giris flex flex-col justify-center gap-3">
-      <h2 class="text-xl font-black text-center">Hikayen</h2>
-      <button data-act="hikayeEkle" class="py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">📷 Yeni hikaye ekle</button>
-      <button data-act="hikayeGor" class="py-3 rounded-full bg-white/10 font-semibold">👁️ Aktif hikayelerimi gör</button>
-      <button data-act="modalKapat" class="text-sm text-slate-400">Kapat</button>
-    </div>`);
-}
 
-function hikayeGor() {
-  const benim = st.kullanici ? st.kullanici.id : null;
-  const simdi = Date.now();
-  const aktif = (st.dbArsiv || [])
-    .filter(h => !h.is_archived && simdi - new Date(h.created_at).getTime() < 864e5)
-    .slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
-  if (!aktif.length) { toast("Aktif hikayen yok"); return; }
-  oynatAc(benim, [{uid: benim, ad: BEN.ad, grad: BEN.grad, hikayeler: aktif}]);
-}
 
 // Hesap tercihleri (gizlilik ve gönderi varsayılanları) sunucudan
 async function ayarlarYukle() {
@@ -1974,6 +1907,52 @@ async function kayitliCikar(id) {
   kaydedilenYukle();
 }
 
+/* ---------- Hikayelerim ve hikaye beğenisi (sunucu) ---------- */
+// Kendi aktif (24 saat içinde, arşive düşmemiş) hikayelerim, eskiden yeniye
+function aktifHikayeler() {
+  const simdi = Date.now();
+  return (st.dbArsiv || [])
+    .filter(h => !h.is_archived && simdi - new Date(h.created_at).getTime() < 864e5)
+    .slice()
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+}
+
+// "Hikayen" çemberi: aktif hikaye varsa oynatıcı, yoksa dosya seçici
+function hikayeBen() {
+  const a = aktifHikayeler();
+  if (a.length && st.kullanici) oynatAc(st.kullanici.id, [{uid: st.kullanici.id, ad: BEN.ad, grad: BEN.grad, foto: st.benFoto, hikayeler: a}]);
+  else $('#hikayeDosya').click();
+}
+
+async function hikayeBegeniYukle(ids) {
+  if (!sb || !st.kullanici || !ids.length) return;
+  const {data} = await sb.from("hikaye_begeniler").select("hikaye_id").eq("user_id", st.kullanici.id).in("hikaye_id", ids);
+  (data || []).forEach(r => { st.hbBegenen[r.hikaye_id] = true; });
+}
+
+// Kalp: anında dolar, sunucuya yazılır; hata olursa eski duruma döner
+async function hbToggle(sid) {
+  if (!sb || !st.kullanici) return;
+  const id = Number(sid);
+  const acik = !!st.hbBegenen[id];
+  const btn = document.getElementById("hbKalp");
+  st.hbBegenen[id] = !acik;
+  if (btn) {
+    btn.textContent = acik ? "🤍" : "❤️";
+    btn.classList.remove("bas");
+    void btn.offsetWidth;
+    btn.classList.add("bas");
+  }
+  const {error} = acik
+    ? await sb.from("hikaye_begeniler").delete().eq("hikaye_id", id).eq("user_id", st.kullanici.id)
+    : await sb.from("hikaye_begeniler").insert({hikaye_id: id, user_id: st.kullanici.id});
+  if (error) {
+    st.hbBegenen[id] = acik;
+    if (btn) btn.textContent = acik ? "❤️" : "🤍";
+    toast("Beğeni kaydedilemedi: " + error.message);
+  }
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -2039,12 +2018,6 @@ async function begeniGizle(id) {
 }
 
 /* ---------- Hikaye arşivi ve öne çıkanlar (Highlights, sunucuda) ---------- */
-function arsivKaydet() {
-  try {
-    localStorage.setItem("vm_arsiv", JSON.stringify(st.arsiv.slice(0, 12)));
-    localStorage.setItem("vm_one", JSON.stringify(st.oneCikanlar.slice(0, 10)));
-  } catch (err) {}
-}
 
 // Kendi arşivini ve highlight'larını sunucudan yükler
 async function highlightYukle() {
@@ -3731,9 +3704,9 @@ document.addEventListener('click', e => {
     case 'sohbetAc': modalKapat(); sohbetAc(d.id); render(); break;
     case 'sohbetKapat': st.sohbetId = null; render(); break;
     case 'gonder': gonder(d.id); break;
-    case 'hikayeben': hikayeMenu(); break;
+    case 'hikayeben': hikayeBen(); break;
     case 'hikayeEkle': $('#hikayeDosya').click(); break;
-    case 'hikayeGor': hikayeGor(); break;
+    case 'hbToggle': hbToggle(d.id); break;
     case 'oynatIleri': oynatIleri(); break;
     case 'oynatGeri': oynatGeri(); break;
     case 'oynatKapat': oynatKapat(); break;
@@ -3749,12 +3722,6 @@ document.addEventListener('click', e => {
     case 'kayitliGor': kayitliGor(d.id); break;
     case 'kayitliCikar': kayitliCikar(d.id); break;
     case 'gonderiSilMenu': modalKapat(); dbGonderiSil(d.id); break;
-    case 'hikaye': {
-      const h = st.hikayeler[+d.i];
-      if (h) { h.goruldu = true; hikayeAc(h); }
-      break;
-    }
-    case 'hikayeKapat': hikayeKapat(); break;
     case 'paylas': {
       const t = $('#gonderiMetin').value.trim();
       if (!t && !st.bekleyenFoto) { toast('Önce bir şey yaz ✍️'); break; }
@@ -3932,7 +3899,6 @@ document.addEventListener('keydown', e => {
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
 try { st.gizlilik = localStorage.getItem('vm_gizlilik') === 'takipci' ? 'takipci' : st.gizlilik; } catch (err) {}
 try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
-try { st.arsiv = JSON.parse(localStorage.getItem('vm_arsiv') || '[]') || []; st.oneCikanlar = JSON.parse(localStorage.getItem('vm_one') || '[]') || []; } catch (err) {}
 try { st.gruplar = JSON.parse(localStorage.getItem('vm_gruplar') || '[]') || []; } catch (err) {}
 try { st.sarki = JSON.parse(localStorage.getItem('vm_sarki') || 'null'); } catch (err) {}
 try { st.tema = localStorage.getItem('vm_tema') === 'acik' ? 'acik' : 'koyu'; } catch (err) {}
@@ -3948,13 +3914,11 @@ try {
 } catch (err) {}
 try { st.engelli = okuListe("vm_engel").map(Number); } catch (err) { st.engelli = []; }
 try { st.dil = localStorage.getItem("vm_dil") || "tr"; } catch (err) { st.dil = "tr"; }
-hikayeleriTemizle();
 st.gonderiler.forEach(g => { g.yorumlar = g.yorumlar || []; });
 st.gonderiler[0].yorumlar.push({ad: "Elif", metin: "Harika fotoğraf!", zaman: "10 dk önce"});
 st.gonderiler[1].yorumlar.push({ad: "Mert", metin: "Ben de geliyorum ☕", zaman: "30 dk önce"});
 desteOlustur();
 render();
-setInterval(() => { if (hikayeleriTemizle() && st.sekme === 'akis') render(); }, 60000);
 
 setInterval(async () => {
   if (st.dbSohbetAcik == null || st.sekme !== 'mesajlar') return;
