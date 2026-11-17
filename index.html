@@ -1807,6 +1807,7 @@ function oynatGoster() {
       </div>
       ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<div class="absolute bottom-5 left-3 right-16 z-20 flex gap-2"><input id="oynatYanit" maxlength="120" placeholder="Hikayeye yanıt yaz…" onfocus="clearTimeout(st.oynZ)" class="flex-1 bg-black/40 border border-white/20 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400"><button data-act="oynatYanitGonder" data-id="${grup.uid}" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Gönder</button></div>`}
       ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<button id="hbKalp" data-act="hbToggle" data-id="${s.id}" class="kalp absolute right-3 bottom-5 z-20 w-11 h-11 rounded-full bg-black/40 text-2xl flex items-center justify-center" aria-label="Beğen">${st.hbBegenen[s.id] ? "❤️" : "🤍"}</button>`}
+      ${grup.uid == (st.kullanici && st.kullanici.id) ? `<button data-act="hikayeGoruntuleyenler" data-id="${s.id}" class="absolute bottom-5 left-3 z-20 h-9 px-3 rounded-full bg-black/60 text-white text-xs font-semibold flex items-center gap-1 shadow"><span>👁</span><span id="hgSayac">…</span></button>` : ""}
       <button data-act="oynatGeri" class="absolute left-0 top-20 bottom-0 w-1/3 z-0" aria-label="Önceki hikaye"></button>
       <button data-act="oynatIleri" class="absolute right-0 top-20 bottom-0 w-2/3 z-0" aria-label="Sonraki hikaye"></button>
     </div>`);
@@ -1814,6 +1815,8 @@ function oynatGoster() {
     const c = document.querySelector(".oynat-cubuk");
     if (c) { c.style.transition = "width 5s linear"; c.style.width = "100%"; }
   });
+  if (st.kullanici && grup.uid == st.kullanici.id) hikayeSayacYukle(s.id);
+  else hikayeGoruntuKaydet(s.id);
   clearTimeout(st.oynZ);
   st.oynZ = setTimeout(() => {
     if (st.oyn && document.querySelector('[data-act="oynatIleri"]')) oynatIleri();
@@ -2316,6 +2319,50 @@ async function bildirimTemizleSunucu() {
   bildirimRozetGuncelle();
   modalKapat();
   toast("Bildirimler temizlendi");
+}
+
+/* ---------- Hikaye görüntüleme ---------- */
+// İzleyen kişi, hikayeyi açtığında bir kez kaydedilir
+async function hikayeGoruntuKaydet(sid) {
+  if (!sb || !st.kullanici) return;
+  await sb.from("hikaye_goruntuleme").upsert([{hikaye_id: Number(sid)}], {onConflict: "hikaye_id,user_id", ignoreDuplicates: true});
+}
+
+// Sahibinin oynatıcısındaki sayaç
+async function hikayeSayacYukle(sid) {
+  const {count} = await sb.from("hikaye_goruntuleme").select("*", {count: "exact", head: true}).eq("hikaye_id", Number(sid));
+  const el = document.getElementById("hgSayac");
+  if (el) el.textContent = count || 0;
+}
+
+// Görüntüleyenler paneli: profil, ad ve izleme saati
+async function hikayeGoruntuleyenler(sid) {
+  modalAc('<div class="h-full bg-[#0d0818] p-6 giris"><p class="text-center text-slate-400 py-10">Yükleniyor…</p></div>');
+  const {data} = await sb.from("hikaye_goruntuleme").select("user_id,created_at").eq("hikaye_id", Number(sid)).order("created_at", {ascending: false});
+  const liste = data || [];
+  const ids = liste.map(x => x.user_id);
+  const profil = {};
+  if (ids.length) {
+    const {data: pr} = await sb.from("profiles").select("id,ad,foto").in("id", ids);
+    (pr || []).forEach(p => { profil[p.id] = p; });
+  }
+  const satirlar = liste.map(x => {
+    const p = profil[x.user_id] || {};
+    const saat = new Date(x.created_at).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"});
+    return `<div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+      ${p.foto ? `<img src="${p.foto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full shrink-0 bg-white/10 flex items-center justify-center text-sm font-black text-white">${esc((p.ad || "?")[0])}</div>`}
+      <span class="flex-1 min-w-0 text-sm text-white truncate">${esc(p.ad || "Kullanıcı")}</span>
+      <span class="text-[11px] text-slate-300 whitespace-nowrap">${saat}</span>
+    </div>`;
+  }).join("");
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center gap-3 mb-5">
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Geri">←</button>
+        <h2 class="text-xl font-black">Görüntüleyenler · ${liste.length}</h2>
+      </div>
+      <div class="space-y-2">${satirlar || '<p class="text-center text-slate-400 py-10">Henüz kimse izlemedi.</p>'}</div>
+    </div>`);
 }
 
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
@@ -4048,6 +4095,7 @@ document.addEventListener('click', e => {
     case 'oynatIleri': oynatIleri(); break;
     case 'oynatGeri': oynatGeri(); break;
     case 'oynatKapat': oynatKapat(); break;
+    case 'hikayeGoruntuleyenler': hikayeGoruntuleyenler(d.id); break;
     case 'oynatYanitGonder': oynatYanitGonder(d.id); break;
     case 'dbPaylas': dbPaylas(d.id); break;
     case 'gonderiMenu': gonderiMenu(d.id); break;
