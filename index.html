@@ -234,6 +234,7 @@ const st = {
   dbSohbetAcik: null,
   dbSohbetMesajlar: [],
   kaydedilen: [],
+  dbHikayeler: [],
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -425,7 +426,7 @@ function gonderiHTML(g) {
 
 function akisHTML() {
   const son = sonHikaye();
-  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler];
+  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler, ...st.dbHikayeler.map(x => ({ad: x.ad, grad: x.grad, uid: x.uid, goruldu: false}))];
   const gonderiler = [
     ...st.benGonderiler.map(g => ({...g, benim: true})),
     ...st.gonderiler.filter(g => !engelliAd(g.yazar))
@@ -434,7 +435,7 @@ function akisHTML() {
   <div class="giris">
     <div class="kaydir overflow-x-auto flex gap-4 py-3 -mx-4 px-4">
       ${hikayeler.map((h, i) => `
-        <button data-act="${h.benim ? "hikayeben" : "hikaye"}" data-i="${i - 1}" class="flex flex-col items-center gap-1 shrink-0">
+        <button data-act="${h.benim ? "hikayeben" : (h.uid ? "dbHikaye" : "hikaye")}" data-i="${i - 1}" data-id="${h.uid || ""}" class="flex flex-col items-center gap-1 shrink-0">
           <div class="halka ${!h.benim && h.goruldu ? "goruldu" : ""}">
             <div class="w-16 h-16 rounded-full border-2 border-[#0d0818] overflow-hidden relative flex items-center justify-center font-black text-xl" style="background:${h.grad}">
               ${h.foto ? `<img src="${h.foto}" class="absolute inset-0 w-full h-full object-cover">` : ""}
@@ -1664,6 +1665,7 @@ $('#hikayeDosya').addEventListener('change', e => {
     st.benHikayeler.push({foto: r.result, t: Date.now()});
     st.arsiv.unshift({foto: r.result, t: Date.now()});
     arsivKaydet();
+    if (sb && st.kullanici) sb.from("hikayeler").insert({foto: r.result}).then(() => hikayeYukle());
     st.benHikayeSayi++;
     toast('Hikayen yayında! +15 puan 🎉');
     render();
@@ -1809,6 +1811,33 @@ function olustur(tur) {
   if (tur === "reels") { reelFormAc(); return; }
   if (tur === "gonderi") { gonderiFormAc(); return; }
   if (tur === "hikaye") { $("#hikayeDosya").click(); }
+}
+
+/* ---------- Hikayeler (sunucu, 24 saat) ---------- */
+async function hikayeYukle() {
+  if (!sb || !st.kullanici) return;
+  const sinir = new Date(Date.now() - 864e5).toISOString();
+  const {data} = await sb.from("hikayeler").select("id,user_id,foto,created_at").gt("created_at", sinir).order("created_at", {ascending: false}).limit(80);
+  const benim = st.kullanici.id;
+  const gruplar = {};
+  (data || []).forEach(h => {
+    if (h.user_id === benim) return;
+    (gruplar[h.user_id] = gruplar[h.user_id] || []).push(h);
+  });
+  const ids = Object.keys(gruplar);
+  const adlar = {};
+  if (ids.length) {
+    const {data: pr} = await sb.from("profiles").select("id,ad").in("id", ids);
+    (pr || []).forEach(p => { adlar[p.id] = p.ad; });
+  }
+  st.dbHikayeler = ids.map(uid => ({uid: uid, ad: adlar[uid] || "Kullanıcı", grad: dbGrad(uid), hikayeler: gruplar[uid]}));
+  if (st.sekme === "akis") render();
+}
+
+function dbHikayeAc(uid) {
+  const k = st.dbHikayeler.find(x => x.uid == uid);
+  if (!k || !k.hikayeler.length) return;
+  hikayeAc({ad: k.ad, grad: k.grad, foto: k.hikayeler[0].foto, metin: ""});
 }
 
 /* ---------- Hikaye arşivi ve öne çıkanlar (bu cihazda) ---------- */
@@ -2014,7 +2043,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
-  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle);
+  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle).then(hikayeYukle);
 }
 
 async function hesapGiris() {
@@ -3138,7 +3167,7 @@ document.addEventListener('click', e => {
     case 'sekme':
       st.sekme = d.sekme;
       if (d.sekme === 'mesajlar') { st.sohbetId = null; st.grupAcik = null; }
-      if (d.sekme === 'akis') gonderiYukle();
+      if (d.sekme === 'akis') { gonderiYukle(); hikayeYukle(); }
       if (d.sekme === 'mesajlar') mesajYukle();
       if (d.sekme === 'profil') gonderiYukle();
       modalKapat();
@@ -3244,6 +3273,7 @@ document.addEventListener('click', e => {
     case 'reelAc': reelAc(d.id); break;
     case 'dbBegen': dbBegen(d.id); break;
     case 'dbKaydet': dbKaydet(d.id); break;
+    case 'dbHikaye': dbHikayeAc(d.id); break;
     case 'kaydedilenlerAc': kaydedilenlerAc(); break;
     case 'dbGonderiSil': dbGonderiSil(d.id); break;
     case 'dbYorumAc': st.dbAcikYorum = st.dbAcikYorum == d.id ? null : d.id; render(); break;
@@ -3355,6 +3385,7 @@ setInterval(async () => {
 }, 8000);
 
 setInterval(() => { if (sb && st.kullanici) bildirimYukle(); }, 30000);
+setInterval(() => { if (sb && st.kullanici) hikayeYukle(); }, 60000);
 
 /* Müzik oynatıcı ilerlemesi (prototip: sahte ilerleme) */
 setInterval(() => {
