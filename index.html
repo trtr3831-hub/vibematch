@@ -3244,6 +3244,7 @@ function hataMetni(err) {
   const k = m.toLowerCase();
   if (k.indexOf("password") !== -1 && (k.indexOf("least") !== -1 || k.indexOf("short") !== -1)) return "Şifre çok kısa. En az 6 karakter yazın.";
   if (k.indexOf("weak") !== -1 || k.indexOf("pwned") !== -1 || k.indexOf("breach") !== -1) return "Bu şifre çok yaygın, başka bir şifre deneyin.";
+  if (k.indexOf("email rate limit") !== -1) return "Doğrulama e-postası gönderim sınırına ulaşıldı. Bir süre sonra tekrar dene.";
   if (k.indexOf("rate limit") !== -1 || k.indexOf("too many") !== -1) return "Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar deneyin.";
   if (k.indexOf("invalid login") === 0) return "E-posta veya şifre hatalı. Hesabınız yoksa üstten Kayıt sekmesini seçin.";
   if (m.indexOf("Email not confirmed") === 0) return "Önce e-postanızdaki doğrulama bağlantısına tıklayın.";
@@ -3286,9 +3287,11 @@ async function hesapKayit() {
   if (!ad) return girisMesaj('Adınızı yazın.', true);
   if (!email || email.indexOf('@') < 1) return girisMesaj('Geçerli bir e-posta yazın (örn. ad@gmail.com).', true);
   if (sifre.length < 6) return girisMesaj('Şifre en az 6 karakter olmalı. Şu an alanda ' + sifre.length + ' karakter var.', true);
-  const {error} = await sb.auth.signUp({email, password: sifre, options: {data: {ad}}});
+  const {data, error} = await sb.auth.signUp({email, password: sifre, options: {data: {ad}}});
   if (error) return girisMesaj(hataMetni(error), true);
-  girisMesaj('Doğrulama e-postası gönderildi. Bağlantıya tıklayıp giriş yapın.', false);
+  // E-posta doğrulaması kapalıysa oturum hemen açılır
+  if (data && data.session) { oturumAc(data.user); return; }
+  girisMesaj('Hesabın oluşturuldu. E-postana gelen doğrulama bağlantısına tıkla, sonra giriş yap.', false);
 }
 
 async function cikis() {
