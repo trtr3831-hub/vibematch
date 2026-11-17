@@ -235,6 +235,12 @@ const st = {
   dbSohbetMesajlar: [],
   kaydedilen: [],
   dbHikayeler: [],
+  dbArsiv: [],
+  dbHighlight: [],
+  arsivSecim: [],
+  hlAktif: null,
+  hlSira: 0,
+  hlAcik: false,
   gfFotolar: [],
   dbYanitAcik: null,
   profilMap: {},
@@ -1668,7 +1674,7 @@ $('#hikayeDosya').addEventListener('change', e => {
     st.benHikayeler.push({foto: r.result, t: Date.now()});
     st.arsiv.unshift({foto: r.result, t: Date.now()});
     arsivKaydet();
-    if (sb && st.kullanici) sb.from("hikayeler").insert({foto: r.result}).then(() => hikayeYukle());
+    if (sb && st.kullanici) sb.from("hikayeler").insert({foto: r.result}).then(() => { hikayeYukle(); highlightYukle(); });
     st.benHikayeSayi++;
     toast('Hikayen yayında! +15 puan 🎉');
     render();
@@ -1846,7 +1852,7 @@ function dbHikayeAc(uid) {
   hikayeAc({ad: k.ad, grad: k.grad, foto: k.hikayeler[0].foto, metin: ""});
 }
 
-/* ---------- Hikaye arşivi ve öne çıkanlar (bu cihazda) ---------- */
+/* ---------- Hikaye arşivi ve öne çıkanlar (Highlights, sunucuda) ---------- */
 function arsivKaydet() {
   try {
     localStorage.setItem("vm_arsiv", JSON.stringify(st.arsiv.slice(0, 12)));
@@ -1854,23 +1860,61 @@ function arsivKaydet() {
   } catch (err) {}
 }
 
-function oneCikanHTML() {
-  const cikanlar = st.oneCikanlar.map((h, i) => `
-    <button data-act="oneCikanAc" data-i="${i}" class="flex flex-col items-center gap-1 shrink-0">
-      <span class="w-14 h-14 rounded-full overflow-hidden border border-white/20"><img src="${h.foto}" class="w-full h-full object-cover"></span>
-      <span class="text-[10px] text-slate-400 w-14 truncate text-center">${esc(h.ad || "Öne çıkan")}</span>
-    </button>`).join("");
-  return `<div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">
-    ${cikanlar}
-  </div>`;
+// Kendi arşivini ve highlight'larını sunucudan yükler
+async function highlightYukle() {
+  if (!sb || !st.kullanici) return;
+  const benim = st.kullanici.id;
+  try { await sb.rpc("hikaye_arsivle"); } catch (err) {}
+  const {data: arsiv} = await sb.from("hikayeler").select("id,foto,created_at,is_archived").eq("user_id", benim).order("created_at", {ascending: false}).limit(200);
+  st.dbArsiv = arsiv || [];
+  const {data: hl, error} = await sb.from("highlights").select("id,ad,created_at,highlight_hikayeler(hikayeler(id,foto,created_at))").eq("user_id", benim).order("created_at", {ascending: true});
+  if (error) return; // highlight tabloları henüz kurulmadıysa sessizce geç
+  st.dbHighlight = (hl || []).map(h => ({
+    id: h.id,
+    ad: h.ad,
+    hikayeler: (h.highlight_hikayeler || []).map(x => x.hikayeler).filter(Boolean)
+      .map(s => ({id: s.id, foto: s.foto, t: s.created_at}))
+      .sort((a, b) => (a.t < b.t ? -1 : 1)),
+  })).filter(h => h.hikayeler.length);
+  if (st.sekme === "profil") render();
 }
 
-function arsivAc() {
-  const liste = st.arsiv;
+// Profilde avatar altındaki yatay highlight çemberleri
+function oneCikanHTML() {
+  const liste = st.dbHighlight || [];
+  if (!liste.length) return "";
+  return `<div class="flex gap-4 overflow-x-auto kaydir mt-4 pb-1">${liste.map((h, i) => `
+    <button data-act="hlAc" data-i="${i}" class="flex flex-col items-center gap-1 shrink-0">
+      <span class="w-16 h-16 rounded-full overflow-hidden border border-white/20 bg-white/5">${h.hikayeler[0] ? `<img src="${h.hikayeler[0].foto}" class="w-full h-full object-cover">` : ""}</span>
+      <span class="text-[10px] text-slate-400 w-16 truncate text-center">${esc(h.ad)}</span>
+    </button>`).join("")}</div>`;
+}
+
+// Hikaye arşivi: seçip yeni highlight oluştur veya mevcut highlight'a ekle
+async function arsivAc() {
+  if (!sb || !st.kullanici) { toast("Arşiv için giriş yapmalısın"); return; }
+  modalAc(`<div class="h-full bg-[#0d0818] p-6 giris"><p class="text-center text-xs text-slate-500 py-8">Yükleniyor…</p></div>`);
+  await highlightYukle();
+  arsivCiz();
+}
+
+function arsivCiz(ad) {
+  const liste = st.dbArsiv || [];
+  const secim = st.arsivSecim || [];
+  const hlSecenek = `<option value="yeni">+ Yeni highlight</option>` + (st.dbHighlight || []).map(h => `<option value="${h.id}">${esc(h.ad)}</option>`).join("");
   const icerik = liste.length
-    ? `<div class="grid grid-cols-3 gap-1">${liste.map((h, i) => `
-         <button data-act="arsivSec" data-i="${i}" class="aspect-[9/16] overflow-hidden rounded-lg bg-white/5"><img src="${h.foto}" class="w-full h-full object-cover"></button>`).join("")}</div>
-       <p class="text-[11px] text-slate-500 mt-4 text-center">Bir hikayeye dokunup öne çıkarabilirsin.</p>`
+    ? `<div class="grid grid-cols-3 gap-1">${liste.map(h => `
+         <button data-act="arsivSec" data-id="${h.id}" class="relative aspect-[9/16] overflow-hidden rounded-lg bg-white/5">
+           <img src="${h.foto}" class="w-full h-full object-cover">
+           ${secim.includes(h.id) ? `<span class="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-400 text-black text-xs font-black flex items-center justify-center">✓</span>` : ""}
+           ${h.is_archived ? "" : `<span class="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 rounded">Aktif</span>`}
+         </button>`).join("")}</div>
+       <div class="mt-5 space-y-2">
+         <p class="text-xs text-slate-400">${secim.length} hikaye seçili · Aktif hikayeler 24 saat sonra arşive düşer</p>
+         <select id="hlHedef" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none">${hlSecenek}</select>
+         <input id="hlAd" maxlength="30" value="${esc(ad || "")}" placeholder="Yeni highlight adı" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400">
+         <button data-act="arsivEkle" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Seçilenleri öne çıkar</button>
+       </div>`
     : `<p class="text-center text-slate-400 py-10">Arşivde henüz hikaye yok. Hikaye paylaştıkça burada görünür.</p>`;
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
@@ -1880,50 +1924,114 @@ function arsivAc() {
       </div>
       ${icerik}
     </div>`);
+  const ara = document.getElementById("hlHedef");
+  if (ara && st.hlSecilenHedef) ara.value = st.hlSecilenHedef;
 }
 
-function arsivSec(i) {
-  const h = st.arsiv[i];
-  if (!h) return;
-  const ekli = st.oneCikanlar.some(x => x.t === h.t);
+function arsivSec(id) {
+  const n = Number(id);
+  const ad = (document.getElementById("hlAd") || {}).value;
+  const hedef = (document.getElementById("hlHedef") || {}).value;
+  st.arsivSecim = st.arsivSecim || [];
+  st.arsivSecim = st.arsivSecim.includes(n) ? st.arsivSecim.filter(x => x !== n) : [...st.arsivSecim, n];
+  st.hlSecilenHedef = hedef;
+  arsivCiz(ad);
+}
+
+async function arsivEkle() {
+  if (!sb || !st.kullanici) return;
+  const secim = (st.arsivSecim || []).slice();
+  if (!secim.length) { toast("Önce en az bir hikaye seç"); return; }
+  const hedef = (document.getElementById("hlHedef") || {}).value || "yeni";
+  let hid = hedef;
+  if (hedef === "yeni") {
+    const ad = ((document.getElementById("hlAd") || {}).value || "").trim();
+    if (!ad) { toast("Highlight adı yaz"); return; }
+    const {data, error} = await sb.from("highlights").insert({user_id: st.kullanici.id, ad: ad.slice(0, 30)}).select("id").single();
+    if (error) { toast("Highlight oluşturulamadı: " + error.message); return; }
+    hid = data.id;
+  }
+  const satirlar = secim.map(s => ({highlight_id: Number(hid), hikaye_id: s}));
+  const {error} = await sb.from("highlight_hikayeler").upsert(satirlar, {onConflict: "highlight_id,hikaye_id", ignoreDuplicates: true});
+  if (error) { toast("Eklenemedi: " + error.message); return; }
+  st.arsivSecim = [];
+  st.hlSecilenHedef = null;
+  toast("Öne çıkarıldı ⭐");
+  await highlightYukle();
+  arsivCiz();
+  render();
+}
+
+// Highlight oynatıcısı
+function highlightAc(i) {
+  const h = (st.dbHighlight || [])[i];
+  if (!h || !h.hikayeler.length) return;
+  st.hlAktif = i;
+  st.hlSira = 0;
+  st.hlAcik = true;
+  hlGoster();
+}
+
+function hlGoster() {
+  const h = (st.dbHighlight || [])[st.hlAktif];
+  if (!h || !st.hlAcik) { hlKapat(); return; }
+  if (st.hlSira >= h.hikayeler.length) { hlKapat(); return; }
+  const s = h.hikayeler[st.hlSira];
   modalAc(`
-    <div class="h-full bg-black flex flex-col items-center justify-center p-6 giris">
-      <img src="${h.foto}" class="max-h-[60%] rounded-2xl object-contain">
-      <div class="flex gap-2 mt-5 w-full max-w-xs">
-        <button data-act="arsivAc" class="flex-1 py-2.5 rounded-full border border-white/20 text-sm">Geri</button>
-        <button data-act="oneCikar" data-i="${i}" class="flex-1 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">${ekli ? "Öne çıkarıldı ✓" : "Öne çıkar"}</button>
+    <div class="relative w-full h-full bg-black overflow-hidden">
+      <img src="${s.foto}" class="absolute inset-0 w-full h-full object-contain">
+      <div class="absolute top-3 left-3 right-3 flex gap-1 z-10">${h.hikayeler.map((_, k) => `<div class="flex-1 h-0.5 rounded bg-white/30 overflow-hidden"><div class="h-full bg-white" style="width:${k < st.hlSira ? 100 : 0}%"></div></div>`).join("")}</div>
+      <div class="absolute top-7 left-4 z-10 font-semibold">${esc(h.ad)}</div>
+      <button data-act="hlGecis" data-y="-1" class="absolute left-0 top-0 bottom-24 w-1/3 z-0" aria-label="Önceki"></button>
+      <button data-act="hlGecis" data-y="1" class="absolute right-0 top-0 bottom-24 w-2/3 z-0" aria-label="Sonraki"></button>
+      <div class="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-10">
+        <button data-act="hlSil" data-id="${s.id}" class="px-4 py-2 rounded-full border border-rose-400 text-rose-300 text-sm">Bu hikayeyi çıkar</button>
+        <button data-act="hlKapat" class="px-4 py-2 rounded-full bg-white/10 text-sm">Kapat</button>
       </div>
     </div>`);
+  clearTimeout(st.hlZ);
+  st.hlZ = setTimeout(() => {
+    if (st.hlAcik && document.querySelector('[data-act="hlGecis"]')) hlGecis(1);
+  }, 5000);
 }
 
-function oneCikar(i) {
-  const h = st.arsiv[i];
+function hlGecis(y) {
+  clearTimeout(st.hlZ);
+  const h = (st.dbHighlight || [])[st.hlAktif];
   if (!h) return;
-  if (st.oneCikanlar.some(x => x.t === h.t)) { toast("Zaten öne çıkarılmış"); return; }
-  if (st.oneCikanlar.length >= 10) { toast("En fazla 10 öne çıkan olabilir"); return; }
-  st.oneCikanlar.push({foto: h.foto, t: h.t, ad: "Öne çıkan"});
-  arsivKaydet();
-  toast("Öne çıkanlara eklendi ⭐");
-  render();
+  st.hlSira += y;
+  if (st.hlSira < 0) st.hlSira = 0;
+  if (st.hlSira >= h.hikayeler.length) { hlKapat(); return; }
+  hlGoster();
 }
 
-function oneCikanAc(i) {
-  const h = st.oneCikanlar[i];
-  if (!h) return;
-  modalAc(`
-    <div class="h-full bg-black flex flex-col items-center justify-center p-6 giris">
-      <img src="${h.foto}" class="max-h-[60%] rounded-2xl object-contain">
-      <button data-act="oneCikarKaldir" data-i="${i}" class="mt-5 px-5 py-2.5 rounded-full border border-rose-400 text-rose-300 text-sm">Öne çıkanlardan kaldır</button>
-      <button data-act="modalKapat" class="mt-3 text-sm text-slate-400">Kapat</button>
-    </div>`);
-}
-
-function oneCikarKaldir(i) {
-  st.oneCikanlar.splice(i, 1);
-  arsivKaydet();
+function hlKapat() {
+  clearTimeout(st.hlZ);
+  st.hlAcik = false;
   modalKapat();
-  toast("Öne çıkanlardan kaldırıldı");
+}
+
+// Hikayeyi highlight'tan çıkar; kalmazsa highlight'ı da sil
+async function hlSil(id) {
+  const h = (st.dbHighlight || [])[st.hlAktif];
+  if (!h || !sb) return;
+  const {error} = await sb.from("highlight_hikayeler").delete().eq("highlight_id", h.id).eq("hikaye_id", Number(id));
+  if (error) { toast("Çıkarılamadı: " + error.message); return; }
+  await highlightYukle();
+  const yeni = (st.dbHighlight || []).find(x => x.id === h.id);
+  if (!yeni) {
+    const {error: e2} = await sb.from("highlights").delete().eq("id", h.id);
+    if (e2) toast("Highlight silinemedi: " + e2.message);
+    hlKapat();
+    toast("Highlight kaldırıldı");
+    render();
+    return;
+  }
+  st.hlAktif = (st.dbHighlight || []).indexOf(yeni);
+  if (st.hlSira >= yeni.hikayeler.length) st.hlSira = yeni.hikayeler.length - 1;
+  toast("Hikaye highlight'tan çıkarıldı");
   render();
+  hlGoster();
 }
 
 /* Gönderi için şarkı dosyası seçimi */
@@ -2049,7 +2157,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
-  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle).then(hikayeYukle);
+  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle).then(hikayeYukle).then(highlightYukle);
 }
 
 async function hesapGiris() {
@@ -3424,10 +3532,12 @@ document.addEventListener('click', e => {
     case 'gfFotoSec': $('#gfDosya').click(); break;
     case 'gonderiEkle': gonderiFormAc(); break;
     case 'arsivAc': arsivAc(); break;
-    case 'arsivSec': arsivSec(+d.i); break;
-    case 'oneCikar': oneCikar(+d.i); break;
-    case 'oneCikanAc': oneCikanAc(+d.i); break;
-    case 'oneCikarKaldir': oneCikarKaldir(+d.i); break;
+    case 'arsivSec': arsivSec(d.id); break;
+    case 'arsivEkle': arsivEkle(); break;
+    case 'hlAc': highlightAc(+d.i); break;
+    case 'hlGecis': hlGecis(+d.y); break;
+    case 'hlSil': hlSil(d.id); break;
+    case 'hlKapat': hlKapat(); break;
     case 'ayarlar': ayarlarAc(); break;
     case 'ayarKaydet': ayarKaydet(); break;
     case 'cal': st.calan = !st.calan; render(); break;
