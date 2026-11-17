@@ -130,6 +130,7 @@
   <div id="yorumPanel" class="absolute inset-0 z-[60] hidden"></div>
   <div id="toast" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 py-2 rounded-full text-sm font-semibold shadow-lg whitespace-nowrap"></div>
   <input type="file" id="hikayeDosya" accept="image/*" class="hidden">
+  <input type="file" id="hlKapakDosya" accept="image/*" class="hidden">
   <input type="file" id="profilDosya" accept="image/*" class="hidden">
   <input type="file" id="reelsDosya" accept="image/*,video/*" class="hidden">
   <input type="file" id="kameraDosya" accept="image/*,video/*" capture="environment" class="hidden">
@@ -2230,6 +2231,43 @@ function istekHTML() {
   </div>`;
 }
 
+/* ---------- Öne çıkarılan kapağı galeriden yükleme ---------- */
+// Görseli 600 px'e küçültüp JPEG olarak döndürür (veritabanına satır olarak yazılır)
+function gorselKucult(dosya, maks) {
+  return new Promise((ok, hata) => {
+    const img = new Image();
+    img.onload = () => {
+      const oran = Math.min(1, maks / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * oran);
+      c.height = Math.round(img.height * oran);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      ok(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => hata(new Error("görsel okunamadı"));
+    img.src = URL.createObjectURL(dosya);
+  });
+}
+
+$('#hlKapakDosya').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  const hid = e.target.dataset.hid;
+  e.target.value = '';
+  if (!f || !hid || !sb || !st.kullanici) return;
+  try {
+    const veri = await gorselKucult(f, 600);
+    const {data, error} = await sb.from('highlights').update({kapak_foto: veri, kapak_hikaye_id: null}).eq('id', Number(hid)).eq('user_id', st.kullanici.id).select('id');
+    if (error || !data || !data.length) { toast('Kapak kaydedilemedi: ' + (error ? error.message : 'yetki yok')); return; }
+    toast('Kapak güncellendi 🖼️');
+    await highlightYukle();
+    modalKapat();
+    render();
+  } catch (err) {
+    toast('Görsel yüklenemedi');
+  }
+});
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -2303,13 +2341,13 @@ async function highlightYukle() {
   try { await sb.rpc("hikaye_arsivle"); } catch (err) {}
   const {data: arsiv} = await sb.from("hikayeler").select("id,foto,created_at,is_archived").eq("user_id", benim).order("created_at", {ascending: false}).limit(200);
   st.dbArsiv = arsiv || [];
-  const {data: hl, error} = await sb.from("highlights").select("id,ad,created_at,kapak_hikaye_id,highlight_hikayeler(hikayeler(id,foto,created_at))").eq("user_id", benim).order("created_at", {ascending: true});
+  const {data: hl, error} = await sb.from("highlights").select("id,ad,created_at,kapak_hikaye_id,kapak_foto,highlight_hikayeler(hikayeler(id,foto,created_at))").eq("user_id", benim).order("created_at", {ascending: true});
   if (error) return; // highlight tabloları henüz kurulmadıysa sessizce geç
   st.dbHighlight = (hl || []).map(h => ({
     id: h.id,
     ad: h.ad,
     kapakId: h.kapak_hikaye_id,
-    kapakFoto: ((st.dbArsiv || []).find(x => x.id === h.kapak_hikaye_id) || {}).foto,
+    kapakFoto: h.kapak_foto || ((st.dbArsiv || []).find(x => x.id === h.kapak_hikaye_id) || {}).foto,
     hikayeler: (h.highlight_hikayeler || []).map(x => x.hikayeler).filter(Boolean)
       .map(s => ({id: s.id, foto: s.foto, t: s.created_at}))
       .sort((a, b) => (a.t < b.t ? -1 : 1)),
@@ -2551,6 +2589,7 @@ function hlKapakSec(hid) {
         <h2 class="text-lg font-black">Kapak fotoğrafı</h2>
         <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
       </div>
+      <button data-act="hlKapakDosya" data-hid="${h.id}" class="w-full mb-5 py-3 rounded-xl bg-white/10 font-semibold text-sm text-white">📁 Galeriden fotoğraf seç</button>
       ${liste.length ? `<div class="grid grid-cols-3 gap-1">${liste.map(x => `
         <button data-act="hlKapakKaydet" data-hid="${h.id}" data-id="${x.id}" class="relative aspect-[9/16] rounded-lg overflow-hidden">
           <img src="${x.foto}" class="w-full h-full object-cover">
@@ -2561,7 +2600,7 @@ function hlKapakSec(hid) {
 
 async function hlKapakKaydet(hid, sid) {
   if (!sb || !st.kullanici) return;
-  const {data, error} = await sb.from("highlights").update({kapak_hikaye_id: Number(sid)}).eq("id", Number(hid)).eq("user_id", st.kullanici.id).select("id");
+  const {data, error} = await sb.from("highlights").update({kapak_hikaye_id: Number(sid), kapak_foto: null}).eq("id", Number(hid)).eq("user_id", st.kullanici.id).select("id");
   if (error || !data || !data.length) { toast("Kapak kaydedilemedi: " + (error ? error.message : "yetki yok")); return; }
   toast("Kapak güncellendi 🖼️");
   await highlightYukle();
@@ -4111,6 +4150,7 @@ document.addEventListener('click', e => {
     case 'hlEkle': hlEkle(d.hid, d.id); break;
     case 'hlKapakSec': hlKapakSec(d.hid); break;
     case 'hlKapakKaydet': hlKapakKaydet(d.hid, d.id); break;
+    case 'hlKapakDosya': { const girdi = $('#hlKapakDosya'); girdi.dataset.hid = d.hid; girdi.click(); break; }
     case 'hlSilTum': hlSilTum(d.hid); break;
     case 'hlGecis': hlGecis(+d.y); break;
     case 'hlKapat': hlKapat(); break;
