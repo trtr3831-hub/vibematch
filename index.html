@@ -509,7 +509,6 @@ function sohbetHTML(id) {
     <div class="flex-1 space-y-2 py-3">${m.map((x, i) => balon(x, i, id)).join('')}</div>
     <div class="flex gap-2 mb-2">
       <button data-act="aiTanisma" data-id="${id}" class="flex-1 py-1.5 rounded-full border border-white/20 text-xs">✨ İlk mesaj önerisi</button>
-      <button data-act="aiDuzelt" data-id="${id}" class="flex-1 py-1.5 rounded-full border border-white/20 text-xs">✨ Mesajımı düzelt</button>
     </div>
     <div id="aiKutu" class="space-y-1 mb-2"></div>
     <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
@@ -4277,16 +4276,6 @@ async function aiTanisma(id) {
   } catch (err) { toast(err.message || "Bir hata oldu"); }
 }
 
-async function aiDuzelt() {
-  const inp = document.getElementById("mesajGiris");
-  const t = inp ? inp.value.trim() : "";
-  if (!t) { toast("Önce bir mesaj yaz ✍️"); return; }
-  toast("Düzeltiliyor ✨");
-  try {
-    const metin = await aiIste("duzelt", t);
-    aiKutuYaz(metin.split("\n").map(aiSatirTemizle).filter(Boolean), "mesajGiris");
-  } catch (err) { toast(err.message || "Bir hata oldu"); }
-}
 
 
 /* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
@@ -4614,7 +4603,6 @@ document.addEventListener('click', e => {
     case 'grupKapat': st.grupAcik = null; render(); break;
     case 'grupGonder': grupGonder(d.id); break;
     case 'aiTanisma': aiTanisma(d.id); break;
-    case 'aiDuzelt': aiDuzelt(); break;
     case 'aiSec': {
       const kutu = document.getElementById('aiKutu');
       const satir = kutu && kutu._satirlar ? kutu._satirlar[+d.i] : '';
