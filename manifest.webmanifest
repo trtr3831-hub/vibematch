@@ -1,0 +1,17 @@
+{
+  "name": "VibeMatch",
+  "short_name": "VibeMatch",
+  "description": "Eskişehir'de aynı kafadaki insanlarla tanış.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0818",
+  "theme_color": "#0d0818",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
