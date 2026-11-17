@@ -593,7 +593,7 @@ function profilHTML() {
   return `
   <div class="giris pb-6">
     <div class="flex items-center justify-between pt-2 pb-3">
-      <div class="font-bold text-base">@${esc(BEN.ad.toLowerCase().replace(/\s+/g, ""))}${st.gizlilik === "takipci" ? " 🔒" : ""}</div>
+      <button data-act="hesapMenuAc" class="font-bold text-base text-left">@${esc(BEN.ad.toLowerCase().replace(/\s+/g, ""))}${st.gizlilik === "takipci" ? " 🔒" : ""} <span class="text-xs text-slate-300">▾</span></button>
       <span></span>
     </div>
 
@@ -661,14 +661,6 @@ function girisYap(eposta) {
   st.oturum = eposta;
   try { localStorage.setItem("vm_oturum", eposta); } catch (err) {}
   toast("Hoş geldin! 👋");
-  render();
-}
-
-function cikis() {
-  st.oturum = null;
-  try { localStorage.removeItem("vm_oturum"); } catch (err) {}
-  st.sekme = "akis";
-  toast("Çıkış yapıldı");
   render();
 }
 
@@ -2640,6 +2632,112 @@ async function istatistikAc() {
     </div>`);
 }
 
+/* ---------- Çoklu hesap (bu cihazda) ---------- */
+// Hesaplar bu cihazda saklanır; oturum belirteçleri yalnızca bu tarayıcıda tutulur
+function hesapListesi() {
+  try { return JSON.parse(localStorage.getItem("vm_hesaplar") || "[]") || []; } catch (err) { return []; }
+}
+
+function hesapYaz(liste) {
+  try { localStorage.setItem("vm_hesaplar", JSON.stringify(liste.slice(0, 5))); } catch (err) {}
+}
+
+function hesapKaydet(session) {
+  const u = session.user;
+  const liste = hesapListesi();
+  const kayit = {
+    id: u.id,
+    email: u.email || "",
+    ad: (u.user_metadata && u.user_metadata.ad) || (u.email || "").split("@")[0],
+    access: session.access_token,
+    refresh: session.refresh_token
+  };
+  const i = liste.findIndex(h => String(h.id) === String(u.id));
+  if (i >= 0) liste[i] = kayit; else liste.push(kayit);
+  hesapYaz(liste);
+}
+
+function hesapSil(id) {
+  hesapYaz(hesapListesi().filter(h => String(h.id) !== String(id)));
+}
+
+// Açık oturum, değiştirmeden önce listeye yazılır (yenilenmiş belirteçler)
+async function hesapMevcutKaydet() {
+  if (!sb) return;
+  const {data} = await sb.auth.getSession();
+  if (data && data.session) hesapKaydet(data.session);
+}
+
+async function hesapMenuAc() {
+  if (!sb || !st.kullanici) { toast("Hesap değiştirmek için giriş yapmalısın"); return; }
+  await hesapMevcutKaydet();
+  const liste = hesapListesi();
+  modalAc(`
+    <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
+    <div class="absolute left-0 right-0 bottom-0 bg-[#0d0818] rounded-t-3xl p-5 pb-8 giris border-t border-white/10 space-y-2">
+      <div class="mx-auto w-10 h-1 rounded-full bg-white/20 mb-3"></div>
+      <h2 class="text-center text-sm font-bold text-white">Hesaplar</h2>
+      ${liste.map(h => `
+        <button data-act="hesapGecis" data-id="${h.id}" class="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 text-left">
+          <span class="w-9 h-9 rounded-full shrink-0 flex items-center justify-center font-black text-black bg-gradient-to-r from-pink-500 to-cyan-400">${esc((h.ad || "?")[0])}</span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold text-white truncate">@${esc((h.ad || "").toLowerCase().replace(/\s+/g, ""))}</span>
+            <span class="block text-[11px] text-slate-300 truncate">${esc(h.email)}</span>
+          </span>
+          ${st.kullanici && String(h.id) === String(st.kullanici.id) ? '<span class="text-emerald-300 text-sm">✓</span>' : ""}
+        </button>`).join("")}
+      <button data-act="hesapEkleForm" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm text-white">＋ Hesap ekle</button>
+    </div>`);
+}
+
+async function hesapGecis(id) {
+  if (st.kullanici && String(id) === String(st.kullanici.id)) { modalKapat(); return; }
+  const hedef = hesapListesi().find(h => String(h.id) === String(id));
+  if (!hedef) return;
+  await hesapMevcutKaydet();
+  const {data, error} = await sb.auth.setSession({access_token: hedef.access, refresh_token: hedef.refresh});
+  if (error || !data || !data.session) {
+    hesapSil(id);
+    toast("Bu hesabın oturumu sona ermiş; yeniden giriş yap");
+    hesapMenuAc();
+    return;
+  }
+  hesapKaydet(data.session);
+  location.reload();
+}
+
+function hesapEkleForm() {
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center gap-3 mb-5">
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Geri">←</button>
+        <h2 class="text-xl font-black">Hesap ekle</h2>
+      </div>
+      <div class="space-y-3">
+        <input id="hesapEmail" type="email" autocomplete="username" placeholder="E-posta" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400 text-white">
+        <input id="hesapSifre" type="password" autocomplete="current-password" placeholder="Şifre" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400 text-white">
+        <button data-act="hesapEkleKaydet" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-sm">Hesabı ekle</button>
+        <p id="hesapMesaj" class="text-xs text-center min-h-[1rem] text-rose-300"></p>
+      </div>
+    </div>`);
+}
+
+// Ayrı bir istemci ile giriş: mevcut oturum bozulmaz, yalnızca yeni hesap listeye eklenir
+async function hesapEkleKaydet() {
+  const email = (document.getElementById("hesapEmail").value || "").trim();
+  const sifre = document.getElementById("hesapSifre").value || "";
+  const mesaj = (t) => { const m = document.getElementById("hesapMesaj"); if (m) m.textContent = t; };
+  if (!email || !sifre) { mesaj("E-posta ve şifre gerekli."); return; }
+  const gecici = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {persistSession: false, autoRefreshToken: false, detectSessionInUrl: false}
+  });
+  const {data, error} = await gecici.auth.signInWithPassword({email, password: sifre});
+  if (error) { mesaj(hataMetni(error)); return; }
+  if (!data || !data.session) { mesaj("Oturum açılamadı."); return; }
+  hesapKaydet(data.session);
+  toast("Hesap eklendi ✅");
+  hesapMenuAc();
+}
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -3160,6 +3258,7 @@ async function hesapKayit() {
 }
 
 async function cikis() {
+  if (st.kullanici) hesapSil(st.kullanici.id);
   if (sb) await sb.auth.signOut();
   st.kullanici = null;
   BEN.ad = 'Sen';
@@ -4403,6 +4502,10 @@ document.addEventListener('click', e => {
     case 'kasaPinKaydet': kasaPinKaydet(); break;
     case 'kasaCikar': kasaCikar(d.id); break;
     case 'istatistikAc': istatistikAc(); break;
+    case 'hesapMenuAc': hesapMenuAc(); break;
+    case 'hesapGecis': hesapGecis(d.id); break;
+    case 'hesapEkleForm': hesapEkleForm(); break;
+    case 'hesapEkleKaydet': hesapEkleKaydet(); break;
     case 'kayitliAc': kayitliAc(d.id); break;
     case 'kayitliGor': kayitliGor(d.id); break;
     case 'kayitliCikar': kayitliCikar(d.id); break;
