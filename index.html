@@ -120,6 +120,7 @@
   <input type="file" id="reelsDosya" accept="image/*,video/*" class="hidden">
   <input type="file" id="kameraDosya" accept="image/*,video/*" capture="environment" class="hidden">
   <input type="file" id="sesDosya" accept="audio/*" class="hidden">
+  <input type="file" id="gfDosya" accept="image/*" class="hidden">
   <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
     <div class="w-full max-w-xs text-center">
       <div class="text-3xl font-black neon mb-1">VibeMatch</div>
@@ -228,6 +229,7 @@ const st = {
   dbAcikYorum: null,
   dbReeller: [],
   bekleyenSes: null,
+  gfFoto: null,
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -442,8 +444,17 @@ function akisHTML() {
   </div>`;
 }
 function profilGonderiHTML() {
-  if (!st.benGonderiler.length) return `<p class="text-xs text-slate-500 text-center">Henüz gönderin yok. Akış sekmesinden paylaşabilirsin.</p>`;
-  return `<div class="grid grid-cols-3 gap-1">${st.benGonderiler.map(g => `
+  const benimDb = (sb && st.kullanici) ? st.dbGonderiler.filter(g => g.benim) : null;
+  const artiKutu = `<button data-act="gonderiEkle" class="aspect-square rounded-lg border border-dashed border-white/30 flex flex-col items-center justify-center text-xs text-slate-400"><span class="text-2xl">＋</span>Gönderi</button>`;
+  if (benimDb) {
+    return `<div class="grid grid-cols-3 gap-1">${artiKutu}${benimDb.map(g => `
+      <div class="aspect-square rounded-lg overflow-hidden relative" style="background:${g.grad}">
+        ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
+        <span class="absolute bottom-1 right-1 text-[10px] bg-black/50 rounded px-1">❤️ ${g.begeni}</span>
+      </div>`).join("")}</div>`;
+  }
+  const yerel = st.benGonderiler;
+  return `<div class="grid grid-cols-3 gap-1">${artiKutu}${yerel.map(g => `
     <div class="aspect-square rounded-lg overflow-hidden relative" style="background:${g.grad}">
       ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
       <span class="absolute bottom-1 right-1 text-[10px] bg-black/50 rounded px-1">❤️ ${g.begeni}</span>
@@ -1725,7 +1736,6 @@ function olusturAc() {
       </div>
       <div class="space-y-3">
         ${secenek("reels", "🎬", "Reels", "Kısa video ya da fotoğraf, açıklama ve şarkıyla")}
-        ${secenek("gonderi", "📝", "Gönderi", "Akış'ta yazı ya da şarkıyla paylaş")}
         ${secenek("hikaye", "⭕", "Hikaye", "24 saat görünen fotoğrafın")}
       </div>
     </div>`);
@@ -1741,6 +1751,8 @@ function gonderiFormAc() {
       </div>
       <div class="p-4 space-y-3">
         <textarea id="gfMetin" maxlength="180" rows="5" placeholder="Bugün Eskişehir'de ne oluyor?" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-cyan-400 resize-none"></textarea>
+        <button data-act="gfFotoSec" class="px-4 py-2 rounded-full border border-white/20 text-sm">📷 Foto ekle</button>
+        <div id="gfOnizleme"></div>
         <button data-act="sesSec" class="px-4 py-2 rounded-full border border-white/20 text-sm">🎵 Şarkı ekle</button>
         <p id="gfSes" class="text-[11px] text-slate-400"></p>
         <p id="gfMesaj" class="text-xs text-rose-400 min-h-[1rem]"></p>
@@ -1755,15 +1767,35 @@ function gonderiFormAc() {
   if (el && ses) el.textContent = "🎵 " + ses.name;
 }
 
-function gfPaylas() {
+document.addEventListener("change", e => {
+  if (e.target.id !== "gfDosya") return;
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  st.gfFoto = f;
+  const kutu = document.getElementById("gfOnizleme");
+  if (kutu) kutu.innerHTML = '<img src="' + URL.createObjectURL(f) + '" class="w-full rounded-2xl object-cover max-h-72">';
+});
+
+function dosyayiMetne(f) {
+  return new Promise(cozum => {
+    const r = new FileReader();
+    r.onload = () => cozum(r.result);
+    r.readAsDataURL(f);
+  });
+}
+
+async function gfPaylas() {
   const t = document.getElementById("gfMetin").value.trim();
   const mesaj = document.getElementById("gfMesaj");
-  if (!t && !st.bekleyenSes) { mesaj.textContent = "Bir şeyler yazın ya da şarkı ekleyin."; return; }
+  if (!t && !st.bekleyenSes && !st.gfFoto) { mesaj.textContent = "Bir şey yazın, foto ya da şarkı ekleyin."; return; }
   if (!sb || !st.kullanici) { mesaj.textContent = "Paylaşmak için giriş yapın."; return; }
   const ses = st.bekleyenSes;
+  const foto = st.gfFoto ? await dosyayiMetne(st.gfFoto) : null;
   st.bekleyenSes = null;
+  st.gfFoto = null;
   modalKapat();
-  dbGonderiPaylas(t, null, ses);
+  dbGonderiPaylas(t, foto, ses);
 }
 
 function olustur(tur) {
@@ -2950,6 +2982,7 @@ document.addEventListener('click', e => {
       if (d.sekme === 'mesajlar') { st.sohbetId = null; st.grupAcik = null; }
       if (d.sekme === 'akis') gonderiYukle();
       if (d.sekme === 'mesajlar') mesajYukle();
+      if (d.sekme === 'profil') gonderiYukle();
       modalKapat();
       render();
       break;
@@ -3093,6 +3126,8 @@ document.addEventListener('click', e => {
     case 'olusturAc': olusturAc(); break;
     case 'olustur': olustur(d.tur); break;
     case 'gfPaylas': gfPaylas(); break;
+    case 'gfFotoSec': $('#gfDosya').click(); break;
+    case 'gonderiEkle': gonderiFormAc(); break;
     case 'arsivAc': arsivAc(); break;
     case 'arsivSec': arsivSec(+d.i); break;
     case 'oneCikar': oneCikar(+d.i); break;
