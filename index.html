@@ -2012,7 +2012,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
-  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle);
+  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle);
 }
 
 async function hesapGiris() {
@@ -2170,6 +2170,7 @@ function takipToggle(id) {
 async function await_takip_ekle(id) {
   const {error} = await sb.from("takipler").insert({takipci_id: st.kullanici.id, takip_edilen_id: id});
   if (error) return toast("Takip edilemedi: " + error.message);
+  await sb.from("bildirimler").insert({alici: id, tur: "takip", metin: BEN.ad + " seni takip etmeye başladı"});
   toast("Takip ediliyor ✅");
   await takipVerileriYukle();
   profilGor(id);
@@ -2230,7 +2231,16 @@ function bildirimEkle(metin) {
   bildirimRozetGuncelle();
 }
 
+async function bildirimYukle() {
+  if (!sb || !st.kullanici) return;
+  const {data} = await sb.from("bildirimler").select("id,tur,metin,okundu,created_at").eq("alici", st.kullanici.id).order("created_at", {ascending: false}).limit(50);
+  const yerel = st.bildirimler.filter(b => !b.db);
+  st.bildirimler = (data || []).map(b => ({db: true, id: b.id, metin: b.metin, s: zamanYaz(b.created_at), okundu: b.okundu, t: Date.parse(b.created_at)})).concat(yerel);
+  bildirimRozetGuncelle();
+}
+
 function bildirimAc() {
+  if (sb && st.kullanici) sb.from("bildirimler").update({okundu: true}).eq("alici", st.kullanici.id).eq("okundu", false).then(() => {});
   st.bildirimler.forEach(b => { b.okundu = true; });
   bildirimKaydet();
   bildirimRozetGuncelle();
@@ -2531,7 +2541,7 @@ async function gonderiYukle() {
     yorumlar = y.data || [];
   }
   st.dbGonderiler = (gs || []).map(g => ({
-    id: g.id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
+    id: g.id, sahip: g.user_id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
     metin: g.metin || "", foto: g.foto, ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
     begeni: begeniler.filter(x => x.gonderi_id === g.id).length,
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
@@ -2558,7 +2568,10 @@ async function dbBegen(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
   if (!g) return;
   if (g.begendim) await sb.from("begeniler").delete().eq("gonderi_id", id).eq("user_id", st.kullanici.id);
-  else await sb.from("begeniler").insert({gonderi_id: id, user_id: st.kullanici.id});
+  else {
+    await sb.from("begeniler").insert({gonderi_id: id, user_id: st.kullanici.id});
+    if (g.sahip && g.sahip !== st.kullanici.id) await sb.from("bildirimler").insert({alici: g.sahip, tur: "begeni", metin: BEN.ad + " gönderini beğendi ❤️"});
+  }
   gonderiYukle();
 }
 
@@ -2568,6 +2581,8 @@ async function dbYorumGonder(id) {
   if (!t) return;
   const {error} = await sb.from("yorumlar").insert({gonderi_id: id, yazar: BEN.ad, metin: t.slice(0, 150)});
   if (error) return toast("Yorum gönderilemedi: " + error.message);
+  const gonderi = st.dbGonderiler.find(x => x.id == id);
+  if (gonderi && gonderi.sahip && gonderi.sahip !== st.kullanici.id) await sb.from("bildirimler").insert({alici: gonderi.sahip, tur: "yorum", metin: BEN.ad + " gönderine yorum yaptı: " + t.slice(0, 40)});
   st.dbAcikYorum = id;
   gonderiYukle();
 }
@@ -2748,6 +2763,7 @@ async function dbMesajGonder() {
   if (!t || !st.dbSohbetAcik) return;
   const {error} = await sb.from("mesajlar_db").insert({alici: st.dbSohbetAcik, metin: t.slice(0, 200)});
   if (error) return toast("Gönderilemedi: " + error.message);
+  await sb.from("bildirimler").insert({alici: st.dbSohbetAcik, tur: "mesaj", metin: BEN.ad + " sana mesaj gönderdi"});
   await dbSohbetYukle(st.dbSohbetAcik);
   render();
   const yeni = document.getElementById("dbMesajGiris");
@@ -3287,6 +3303,8 @@ setInterval(async () => {
   if (kutu) kutu.innerHTML = dbBalonlar();
 }, 8000);
 
+setInterval(() => { if (sb && st.kullanici) bildirimYukle(); }, 30000);
+
 /* Müzik oynatıcı ilerlemesi (prototip: sahte ilerleme) */
 setInterval(() => {
   if (!st.calan || st.sekme !== 'profil') return;
@@ -3307,7 +3325,6 @@ setInterval(() => {
   const g = st.benGonderiler[Math.floor(Math.random() * st.benGonderiler.length)];
   g.begeni++;
   toast('💗 Bir gönderin beğenildi! +10 puan');
-  bildirimEkle('Bir gönderin beğenildi ❤️');
   if (st.sekme === 'liderlik' || st.sekme === 'profil') render();
   else $('#puanRozet').textContent = puanHesapla();
 }, 25000);
