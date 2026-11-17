@@ -138,7 +138,7 @@
   <input type="file" id="kameraDosya" accept="image/*,video/*" capture="environment" class="hidden">
   <input type="file" id="sesDosya" accept="audio/*" class="hidden">
   <input type="file" id="gfDosya" accept="image/*" multiple class="hidden">
-  <div id="girisEkrani" class="absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
+  <div id="girisEkrani" class="hidden absolute inset-0 z-30 bg-[#0d0818] flex items-center justify-center p-6">
     <div class="w-full max-w-xs text-center">
       <div class="text-3xl font-black neon mb-1">VibeMatch</div>
       <div class="mb-6"></div>
@@ -3290,7 +3290,8 @@ if (sb) {
     else girisEkraniGoster();
   });
 } else {
-  girisMesaj('Demo modu: sunucu henüz bağlı değil.', false);
+  girisEkraniGoster();
+  girisMesaj('Sunucuya bağlanılamadı. Biraz sonra tekrar dene.', true);
 }
 
 /* Spotify veya YouTube bağlantısından gömülü oynatıcı adresi üretir */
