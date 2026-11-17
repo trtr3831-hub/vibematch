@@ -2582,7 +2582,7 @@ async function gonderiYukle() {
   if (ids.length) {
     const b = await sb.from("begeniler").select("gonderi_id,user_id").in("gonderi_id", ids);
     begeniler = b.data || [];
-    const y = await sb.from("yorumlar").select("id,gonderi_id,ust_id,yazar,metin,created_at").in("gonderi_id", ids).order("created_at", {ascending: true});
+    const y = await sb.from("yorumlar").select("id,gonderi_id,ust_id,user_id,yazar,metin,created_at").in("gonderi_id", ids).order("created_at", {ascending: true});
     yorumlar = y.data || [];
     const sayiRes = await sb.rpc("gonderi_begeni_sayilari", {idler: ids});
     (sayiRes.data || []).forEach(r => { sayiMap[r.gonderi_id] = r.sayi; });
@@ -2734,6 +2734,10 @@ async function dbYanitGonder(gonderiId, ustId) {
   if (!t) return;
   const {error} = await sb.from("yorumlar").insert({gonderi_id: Number(gonderiId), ust_id: Number(ustId), yazar: BEN.ad, metin: t.slice(0, 150)});
   if (error) return toast("Yanıt gönderilemedi: " + error.message);
+  const ustYorum = ((st.dbGonderiler.find(g => g.id == gonderiId) || {yorumlar: []}).yorumlar || []).find(y => y.id == ustId);
+  if (ustYorum && ustYorum.user_id && ustYorum.user_id !== st.kullanici.id) {
+    await sb.from("bildirimler").insert({alici: ustYorum.user_id, tur: "yanit", metin: BEN.ad + " yorumunuza yanıt verdi: " + t.slice(0, 60)});
+  }
   st.dbAcikYorum = Number(gonderiId);
   st.dbYanitAcik = null;
   gonderiYukle();
