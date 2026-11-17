@@ -2574,12 +2574,6 @@ function sarkiKaydet() {
   } catch (err) {}
 }
 
-/* ---------- Takip (bu cihazda) ---------- */
-function takipKaydet() {
-  try { localStorage.setItem("vm_takip", JSON.stringify(st.takipEdilen)); } catch (err) {}
-}
-
-/* Şimdilik yalnızca bu cihazdaki takipler sayılır; gerçek takipçi sayısı veritabanıyla gelecek */
 function takipciSayisi(p) {
   return (st.takipciMap || {})[p.id] || 0;
 }
@@ -2613,24 +2607,14 @@ function profilGor(id) {
         <div class="flex flex-wrap justify-center gap-1.5 mt-3">${p.ilgi.map(i => `<span class="cip ${BEN.ilgi.includes(i) ? "ortak" : ""}">${esc(i)}</span>`).join("")}</div>
         <p class="text-sm text-slate-300 mt-4">👥 <strong>${takipciSayisi(p)}</strong> takipçi</p>
         <button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full ${takipte ? "border border-white/20" : "bg-gradient-to-r from-pink-500 to-cyan-400 font-bold"}">${takipte ? "Takibi bırak" : "Takip et"}</button>
-        <p class="text-[11px] text-slate-500 mt-3">Takipçi sayısı şimdilik yalnızca bu cihazda görünür.</p>
       </div>
     </div>`);
 }
 
 function takipToggle(id) {
-  const takipte = st.takipEdilen.some(x => String(x) === String(id));
-  if (sb && st.kullanici) {
-    if (takipte) await_takip_sil(id);
-    else await_takip_ekle(id);
-    return;
-  }
-  const n = Number(id);
-  st.takipEdilen = takipte ? st.takipEdilen.filter(x => x !== n) : [...st.takipEdilen, n];
-  takipKaydet();
-  toast(takipte ? "Takipten çıkıldı" : "Takip ediliyor ✅");
-  profilGor(id);
-  render();
+  if (!sb || !st.kullanici) { toast("Takip için giriş yapmalısın"); return; }
+  if (st.takipEdilen.some(x => String(x) === String(id))) await_takip_sil(id);
+  else await_takip_ekle(id);
 }
 
 async function await_takip_ekle(id) {
@@ -2653,31 +2637,71 @@ async function await_takip_sil(id) {
 }
 
 /* ---------- Takip listeleri ---------- */
-function takipListeAc(t) {
+async function takipListeAc(t) {
+  if (!sb || !st.kullanici) { toast("Takip listesi için giriş yapmalısın"); return; }
   const takipci = t === "takipci";
-  let icerik;
-  if (takipci) {
-    icerik = `<p class="text-center text-slate-400 py-10">Henüz takipçin yok.<br><span class="text-[11px] text-slate-500">Takipçi listesi veritabanı bağlandığında, seni takip eden kişilerle birlikte görünür.</span></p>`;
-  } else {
-    const liste = st.takipEdilen.map(id => kisi(id)).filter(Boolean);
-    icerik = liste.length
-      ? liste.map(p => `
-          <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-            <div class="w-11 h-11 rounded-full flex items-center justify-center font-black shrink-0" style="background:${p.grad}">${esc(p.ad[0])}</div>
-            <div class="flex-1 min-w-0"><div class="font-semibold text-sm truncate">${esc(p.ad)}, ${p.yas}</div><div class="text-[11px] text-slate-400 truncate">${esc(p.sehir)} · ${esc(p.bolum)}</div></div>
-            <button data-act="takipToggle" data-id="${p.id}" class="px-3 py-1.5 rounded-full border border-white/20 text-xs">Bırak</button>
-          </div>`).join("")
-      : `<p class="text-center text-slate-400 py-10">Henüz kimseyi takip etmiyorsun.<br><span class="text-[11px] text-slate-500">Keşfet'te birini bulup "Profili gör" ile takip edebilirsin.</span></p>`;
-  }
-  modalAc(`
-    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
-      <div class="flex items-center justify-between mb-5">
-        <h2 class="text-xl font-black">${takipci ? "Takipçilerin" : "Takip ettiklerin"}</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+  const benim = st.kullanici.id;
+  const kabuk = (icerik, sayi) => modalAc(`
+    <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
+    <div class="absolute left-4 right-4 top-16 bottom-24 mx-auto max-w-sm flex flex-col bg-[#0d0818] rounded-3xl border border-white/10 shadow-2xl giris">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        <h2 class="text-lg font-black">${takipci ? "Takipçiler" : "Takip edilenler"} <span class="text-sm text-slate-400 font-normal">${sayi}</span></h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl" aria-label="Kapat">✕</button>
       </div>
-      <div class="space-y-2">${icerik}</div>
-      ${takipci ? "" : '<p class="text-[11px] text-slate-500 text-center mt-4">Takip listesi şimdilik yalnızca bu cihazda tutulur.</p>'}
+      <div class="flex-1 overflow-y-auto p-4 space-y-2">${icerik}</div>
     </div>`);
+  kabuk('<p class="text-center text-slate-400 py-10">Yükleniyor…</p>', "");
+
+  const {data: iliskiler} = takipci
+    ? await sb.from("takipler").select("takipci_id").eq("takip_edilen_id", benim)
+    : await sb.from("takipler").select("takip_edilen_id").eq("takipci_id", benim);
+  const ids = (iliskiler || []).map(r => (takipci ? r.takipci_id : r.takip_edilen_id));
+  let profiller = [];
+  if (ids.length) {
+    const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto").in("id", ids);
+    profiller = data || [];
+  }
+  // Profil penceresi (kisi) için kayıt
+  profiller.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
+
+  const satirlar = profiller.map(p => {
+    const takipte = st.takipEdilen.some(x => x == p.id);
+    const avatar = p.foto
+      ? `<img src="${p.foto}" class="w-11 h-11 rounded-full object-cover shrink-0">`
+      : `<div class="w-11 h-11 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(p.id)}">${esc((p.ad || "?")[0])}</div>`;
+    return `
+      <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+        <button data-act="profilGor" data-id="${p.id}" class="flex items-center gap-3 flex-1 min-w-0 text-left">
+          ${avatar}
+          <div class="min-w-0">
+            <div class="font-semibold text-sm truncate">${esc(p.ad || "Kullanıcı")}</div>
+            <div class="text-[11px] text-slate-400 truncate">@${esc((p.ad || "").toLowerCase().replace(/\s+/g, ""))}</div>
+          </div>
+        </button>
+        <button data-act="listeTakip" data-id="${p.id}" data-t="${t}" class="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${takipte ? "border border-white/20" : "bg-gradient-to-r from-pink-500 to-cyan-400 text-black"}">${takipte ? "Takipten çık" : "Takip et"}</button>
+      </div>`;
+  }).join("");
+  kabuk(satirlar || `<p class="text-center text-slate-400 py-10">${takipci ? "Henüz takipçin yok." : "Henüz kimseyi takip etmiyorsun."}</p>`, profiller.length);
+}
+
+// Listeden takip et / takipten çık: durum ve sayaçlar anında güncellenir
+async function listeTakip(id, t) {
+  if (!sb || !st.kullanici) return;
+  const takipte = st.takipEdilen.some(x => x == id);
+  if (takipte) {
+    const {error} = await sb.from("takipler").delete().eq("takipci_id", st.kullanici.id).eq("takip_edilen_id", id);
+    if (error) { toast("Takipten çıkılamadı: " + error.message); return; }
+    toast("Takipten çıkıldı");
+  } else {
+    const {error} = await sb.from("takipler").insert({takipci_id: st.kullanici.id, takip_edilen_id: id});
+    if (error) { toast("Takip edilemedi: " + error.message); return; }
+    await sb.from("bildirimler").insert({alici: id, tur: "takip", metin: BEN.ad + " seni takip etmeye başladı"});
+    toast("Takip ediliyor ✅");
+  }
+  delete st.takipciMap[id];
+  await takipVerileriYukle();
+  render();
+  takipListeAc(t);
 }
 
 /* ---------- Bildirimler (bu cihazda) ---------- */
@@ -2724,7 +2748,6 @@ function bildirimAc() {
       </div>
       <div class="space-y-2">${liste}</div>
       ${st.bildirimler.length ? '<button data-act="bildirimTemizle" class="mt-4 w-full py-2 rounded-full border border-white/20 text-sm">Hepsini temizle</button>' : ""}
-      <p class="text-[11px] text-slate-500 text-center mt-4">Bildirimler şimdilik yalnızca bu cihazda görünür.</p>
     </div>`);
 }
 
@@ -3836,6 +3859,7 @@ document.addEventListener('click', e => {
     case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
     case 'takipToggle': takipToggle(d.id); break;
     case 'takipListe': takipListeAc(d.t); break;
+    case 'listeTakip': listeTakip(d.id, d.t); break;
     case 'bildirimAc': bildirimAc(); break;
     case 'bildirimTemizle': st.bildirimler = []; bildirimKaydet(); bildirimRozetGuncelle(); modalKapat(); break;
     case 'kirpKaydet': kirpKaydet(); break;
@@ -3906,7 +3930,6 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Başlatma ---------- */
 try { st.benFoto = localStorage.getItem('vm_foto') || null; } catch (err) {}
-try { st.takipEdilen = JSON.parse(localStorage.getItem('vm_takip') || '[]') || []; } catch (err) {}
 try { st.gizlilik = localStorage.getItem('vm_gizlilik') === 'takipci' ? 'takipci' : st.gizlilik; } catch (err) {}
 try { st.bildirimler = JSON.parse(localStorage.getItem('vm_bildirim') || '[]') || []; } catch (err) {}
 try { st.arsiv = JSON.parse(localStorage.getItem('vm_arsiv') || '[]') || []; st.oneCikanlar = JSON.parse(localStorage.getItem('vm_one') || '[]') || []; } catch (err) {}
