@@ -2564,6 +2564,15 @@ async function dbGonderiPaylas(metin, foto, ses) {
   gonderiYukle();
 }
 
+async function dbGonderiSil(id) {
+  if (!sb || !st.kullanici) return;
+  if (!confirm("Bu gönderi kalıcı olarak silinsin mi?")) return;
+  const {error} = await sb.from("gonderiler").delete().eq("id", id).eq("user_id", st.kullanici.id);
+  if (error) return toast("Silinemedi: " + error.message);
+  toast("Gönderi silindi");
+  gonderiYukle();
+}
+
 async function dbBegen(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
   if (!g) return;
@@ -2613,6 +2622,7 @@ function dbGonderiHTML(g) {
           <button data-act="dbYorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
         </div>
         <p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>
+        ${g.benim ? `<button data-act="dbGonderiSil" data-id="${g.id}" class="px-1 pt-1 text-xs text-rose-400 text-left">🗑️ Gönderiyi sil</button>` : ""}
         ${aciklama}
         <button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>
         ${acik ? `
@@ -3195,6 +3205,7 @@ document.addEventListener('click', e => {
     case 'reelAlici': reelGonder(d.id, d.reel); break;
     case 'reelAc': reelAc(d.id); break;
     case 'dbBegen': dbBegen(d.id); break;
+    case 'dbGonderiSil': dbGonderiSil(d.id); break;
     case 'dbYorumAc': st.dbAcikYorum = st.dbAcikYorum == d.id ? null : d.id; render(); break;
     case 'dbYorumGonder': dbYorumGonder(d.id); break;
     case 'notDuzenle': notDuzenle(); break;
