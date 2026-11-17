@@ -4288,15 +4288,6 @@ async function aiDuzelt() {
   } catch (err) { toast(err.message || "Bir hata oldu"); }
 }
 
-async function aiBio() {
-  const istem = `Adım ${BEN.ad}, ${BEN.yas} yaşındayım, ${BEN.bolum}. İlgi alanlarım: ${BEN.ilgi.join(", ")}. Bu bilgilerle kısa bir profil açıklaması yaz.`;
-  toast("Bio hazırlanıyor ✨");
-  try {
-    const metin = await aiIste("bio", istem);
-    const alan = document.getElementById("ayarBio");
-    if (alan) alan.value = metin.slice(0, 120);
-  } catch (err) { toast(err.message || "Bir hata oldu"); }
-}
 
 /* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
 function reelListe() {
@@ -4385,7 +4376,6 @@ function profilDuzenleAc() {
         <div>
           <label class="text-xs text-slate-400">Kısa açıklama (bio)</label>
           <textarea id="ayarBio" maxlength="150" rows="3" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
-          <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
         </div>
         <div>
           <label class="text-xs text-slate-400">Web sitesi / link</label>
@@ -4625,7 +4615,6 @@ document.addEventListener('click', e => {
     case 'grupGonder': grupGonder(d.id); break;
     case 'aiTanisma': aiTanisma(d.id); break;
     case 'aiDuzelt': aiDuzelt(); break;
-    case 'aiBio': aiBio(); break;
     case 'aiSec': {
       const kutu = document.getElementById('aiKutu');
       const satir = kutu && kutu._satirlar ? kutu._satirlar[+d.i] : '';
