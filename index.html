@@ -34,6 +34,8 @@
   .eq.cal span:nth-child(2){animation-delay:.2s}
   .eq.cal span:nth-child(3){animation-delay:.4s}
   .eq.cal span:nth-child(4){animation-delay:.1s}
+  .kalp.bas{animation:kalpPop .45s ease}
+  @keyframes kalpPop{0%{transform:scale(.5)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
   @keyframes eq{0%,100%{height:4px}50%{height:16px}}
   .sekme{padding:8px 0;border-radius:999px;transition:background .2s,color .2s}
   .sekme[aria-current="true"]{color:#fff;background:linear-gradient(90deg,rgba(255,46,136,.35),rgba(0,229,255,.35))}
@@ -105,10 +107,11 @@
 
   <main id="gorunum" class="flex-1 kaydir px-4 pb-28"></main>
 
-  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-5 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
+  <nav id="nav" class="absolute bottom-3 left-3 right-3 z-30 grid grid-cols-6 gap-1 p-1.5 rounded-full bg-black/70 backdrop-blur-xl border border-white/10 shadow-2xl">
     <button data-act="sekme" data-sekme="akis" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">📸</span><span data-i18n="nav_akis">Akış</span></button>
     <button data-act="reelsAc" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🎬</span>Reels</button>
     <button data-act="sekme" data-sekme="ara" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">🔎</span>Ara</button>
+    <button data-act="gonderiEkle" class="flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-label="Gönderi ekle"><span class="w-8 h-8 rounded-xl bg-white text-black font-black text-xl leading-none flex items-center justify-center">＋</span><span>Gönderi</span></button>
     <button data-act="sekme" data-sekme="mesajlar" class="sekme relative flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">💬</span><span data-i18n="nav_mesaj">Mesaj</span><span id="rozet" class="hidden absolute -top-1 right-3 min-w-[16px] h-4 px-1 rounded-full bg-pink-500 text-[10px] font-bold text-white flex items-center justify-center"></span></button>
     <button data-act="sekme" data-sekme="profil" class="sekme flex flex-col items-center gap-0.5 text-[11px] text-slate-400" aria-current="false"><span class="ikon text-lg">👤</span><span data-i18n="nav_profil">Profil</span></button>
   </nav>
@@ -1846,10 +1849,155 @@ async function hikayeYukle() {
   if (st.sekme === "akis") render();
 }
 
-function dbHikayeAc(uid) {
-  const k = st.dbHikayeler.find(x => x.uid == uid);
-  if (!k || !k.hikayeler.length) return;
-  hikayeAc({ad: k.ad, grad: k.grad, foto: k.hikayeler[0].foto, metin: ""});
+
+/* ---------- Hikaye oynatıcı: birden fazla hikaye, ilerleme çubuğu, dokunarak geçiş ---------- */
+function dbHikayeAc(uid) { oynatAc(uid, st.dbHikayeler); }
+
+function oynatAc(uid, gruplar) {
+  const liste = gruplar || st.dbHikayeler;
+  const bas = liste.findIndex(g => g.uid == uid);
+  if (bas < 0 || !liste[bas].hikayeler.length) return;
+  st.oyn = {gruplar: liste, g: bas, s: 0};
+  oynatGoster();
+}
+
+function oynatGoster() {
+  const o = st.oyn;
+  if (!o) return;
+  const grup = o.gruplar[o.g];
+  const s = grup && grup.hikayeler[o.s];
+  if (!s) { oynatKapat(); return; }
+  const avatarFoto = grup.uid == (st.kullanici && st.kullanici.id) ? st.benFoto : (st.profilMap[grup.uid] || {}).foto;
+  const cubuklar = grup.hikayeler.map((_, k) => `<div class="flex-1 h-0.5 rounded bg-white/30 overflow-hidden"><div class="h-full bg-white ${k === o.s ? "oynat-cubuk" : ""}" style="width:${k < o.s ? 100 : 0}%"></div></div>`).join("");
+  modalAc(`
+    <div class="relative w-full h-full bg-black overflow-hidden">
+      <img src="${s.foto}" class="absolute inset-0 w-full h-full object-contain">
+      <div class="absolute top-3 left-3 right-3 flex gap-1 z-10">${cubuklar}</div>
+      <div class="absolute top-7 left-3 right-3 z-10 flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-black" style="background:${grup.grad}">${avatarFoto ? `<img src="${avatarFoto}" class="w-full h-full object-cover">` : esc((grup.ad || "?")[0])}</div>
+        <span class="font-semibold text-sm truncate">${esc(grup.ad)}</span>
+        <span class="text-[11px] text-slate-300">${zamanYaz(s.created_at)}</span>
+        <button data-act="oynatKapat" class="ml-auto text-xl px-2" aria-label="Kapat">✕</button>
+      </div>
+      <button data-act="oynatGeri" class="absolute left-0 top-20 bottom-0 w-1/3 z-0" aria-label="Önceki hikaye"></button>
+      <button data-act="oynatIleri" class="absolute right-0 top-20 bottom-0 w-2/3 z-0" aria-label="Sonraki hikaye"></button>
+    </div>`);
+  requestAnimationFrame(() => {
+    const c = document.querySelector(".oynat-cubuk");
+    if (c) { c.style.transition = "width 5s linear"; c.style.width = "100%"; }
+  });
+  clearTimeout(st.oynZ);
+  st.oynZ = setTimeout(() => {
+    if (st.oyn && document.querySelector('[data-act="oynatIleri"]')) oynatIleri();
+  }, 5000);
+}
+
+function oynatIleri() {
+  const o = st.oyn;
+  if (!o) return;
+  const grup = o.gruplar[o.g];
+  if (o.s < grup.hikayeler.length - 1) o.s++;
+  else if (o.g < o.gruplar.length - 1) { o.g++; o.s = 0; }
+  else { oynatKapat(); return; }
+  oynatGoster();
+}
+
+function oynatGeri() {
+  const o = st.oyn;
+  if (!o) return;
+  if (o.s > 0) o.s--;
+  else if (o.g > 0) { o.g--; o.s = o.gruplar[o.g].hikayeler.length - 1; }
+  oynatGoster();
+}
+
+function oynatKapat() {
+  clearTimeout(st.oynZ);
+  st.oyn = null;
+  modalKapat();
+}
+
+// Kendi hikayene dokununca: yeni ekle veya aktif hikayelerini izle
+function hikayeMenu() {
+  modalAc(`
+    <div class="h-full bg-[#0d0818] p-6 giris flex flex-col justify-center gap-3">
+      <h2 class="text-xl font-black text-center">Hikayen</h2>
+      <button data-act="hikayeEkle" class="py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">📷 Yeni hikaye ekle</button>
+      <button data-act="hikayeGor" class="py-3 rounded-full bg-white/10 font-semibold">👁️ Aktif hikayelerimi gör</button>
+      <button data-act="modalKapat" class="text-sm text-slate-400">Kapat</button>
+    </div>`);
+}
+
+function hikayeGor() {
+  const benim = st.kullanici ? st.kullanici.id : null;
+  const simdi = Date.now();
+  const aktif = (st.dbArsiv || [])
+    .filter(h => !h.is_archived && simdi - new Date(h.created_at).getTime() < 864e5)
+    .slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+  if (!aktif.length) { toast("Aktif hikayen yok"); return; }
+  oynatAc(benim, [{uid: benim, ad: BEN.ad, grad: BEN.grad, hikayeler: aktif}]);
+}
+
+/* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
+async function dbPaylas(id) {
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g) return;
+  const url = location.href.split("#")[0];
+  const metin = (g.yazar + ": " + (g.metin || "Gönderi")).slice(0, 100);
+  if (navigator.share) {
+    try { await navigator.share({title: "VibeMatch", text: metin, url}); return; } catch (err) { if (err && err.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast("Bağlantı kopyalandı 🔗"); }
+  catch (err) { toast("Paylaşılamadı"); }
+}
+
+function gonderiMenu(id) {
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g) return;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] p-6 giris flex flex-col justify-center gap-3">
+      <h2 class="text-lg font-black text-center">Gönderi seçenekleri</h2>
+      ${g.benim ? `
+        <button data-act="gonderiDuzenle" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">✏️ Düzenle</button>
+        <button data-act="begeniGizle" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">${g.begeniGizli ? "👁️ Beğenileri göster" : "🙈 Beğenileri gizle"}</button>
+        <button data-act="gonderiSilMenu" data-id="${id}" class="py-3 rounded-full border border-rose-400 text-rose-300 font-semibold">🗑️ Sil</button>`
+        : `<button data-act="dbPaylas" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">🔗 Bağlantıyı paylaş</button>`}
+      <button data-act="modalKapat" class="text-sm text-slate-400">Kapat</button>
+    </div>`);
+}
+
+function gonderiDuzenle(id) {
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g || !g.benim) return;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black">Gönderiyi düzenle</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      <textarea id="duzMetin" maxlength="180" rows="5" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm outline-none focus:border-cyan-400 resize-none">${esc(g.metin)}</textarea>
+      <button data-act="gonderiDuzenleKaydet" data-id="${id}" class="w-full mt-3 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Kaydet</button>
+    </div>`);
+}
+
+async function gonderiDuzenleKaydet(id) {
+  if (!sb || !st.kullanici) return;
+  const metin = ((document.getElementById("duzMetin") || {}).value || "").slice(0, 180);
+  const {data, error} = await sb.from("gonderiler").update({metin}).eq("id", id).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Düzenlenemedi: " + (error ? error.message : "yetki yok")); return; }
+  modalKapat();
+  toast("Gönderi güncellendi ✏️");
+  gonderiYukle();
+}
+
+async function begeniGizle(id) {
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g || !g.benim || !sb) return;
+  const yeni = !g.begeniGizli;
+  const {data, error} = await sb.from("gonderiler").update({begeni_gizli: yeni}).eq("id", id).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Ayar kaydedilemedi: " + (error ? error.message : "yetki yok")); return; }
+  modalKapat();
+  toast(yeni ? "Beğeni sayısı gizlendi 🙈" : "Beğeni sayısı gösteriliyor");
+  gonderiYukle();
 }
 
 /* ---------- Hikaye arşivi ve öne çıkanlar (Highlights, sunucuda) ---------- */
@@ -2685,7 +2833,7 @@ async function gonderiYukle() {
   if (!sb || !st.kullanici) return;
   st.gonderiYuklendi = true;
   const benim = st.kullanici.id;
-  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(60);
+  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at,begeni_gizli").order("created_at", {ascending: false}).limit(60);
   const ids = (gs || []).map(g => g.id);
   let begeniler = [], yorumlar = [], sayiMap = {}, begenAdlari = {};
   if (ids.length) {
@@ -2705,6 +2853,7 @@ async function gonderiYukle() {
     id: g.id, sahip: g.user_id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
     metin: g.metin || "", foto: g.foto, fotolar: g.fotolar || (g.foto ? [g.foto] : []), ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
     begeni: sayiMap[g.id] || 0,
+    begeniGizli: !!g.begeni_gizli,
     begenenler: (g.user_id === benim) ? begeniler.filter(x => x.gonderi_id === g.id).map(x => begenAdlari[x.user_id] || "Kullanıcı") : [],
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
@@ -2811,6 +2960,8 @@ async function gonderiDetay(id) {
 async function dbBegen(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
   if (!g) return;
+  st.kalpAnim = id;
+  setTimeout(() => { st.kalpAnim = null; }, 700);
   if (g.begendim) await sb.from("begeniler").delete().eq("gonderi_id", id).eq("user_id", st.kullanici.id);
   else {
     await sb.from("begeniler").insert({gonderi_id: id, user_id: st.kullanici.id});
@@ -2886,16 +3037,17 @@ function dbGonderiHTML(g) {
             <div class="text-sm font-semibold truncate">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
             <div class="text-[11px] text-slate-400">${esc(g.sehir)} · ${g.zaman}</div>
           </div>
+          <button data-act="gonderiMenu" data-id="${g.id}" class="text-lg px-1 text-slate-400" aria-label="Gönderi seçenekleri">⋯</button>
         </header>
         <div class="rounded-xl overflow-hidden">${medya}</div>
         ${g.ses ? `<audio src="${g.ses}" controls loop autoplay class="w-full mt-2"></audio>` : ""}
         <div class="flex items-center gap-4 px-1 pt-2">
-          <button data-act="dbBegen" data-id="${g.id}" class="text-xl" aria-label="Beğen">${g.begendim ? "❤️" : "🤍"}</button>
+          <button data-act="dbBegen" data-id="${g.id}" class="text-xl kalp ${st.kalpAnim == g.id ? "bas" : ""}" aria-label="Beğen">${g.begendim ? "❤️" : "🤍"}</button>
           <button data-act="dbYorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
+          <button data-act="dbPaylas" data-id="${g.id}" class="text-xl" aria-label="Paylaş">✈️</button>
           <button data-act="dbKaydet" data-id="${g.id}" class="text-xl ml-auto" aria-label="Kaydet">${st.kaydedilen.includes(g.id) ? "🔖" : "📑"}</button>
         </div>
-        ${g.benim && g.begenenler.length ? `<div class="px-1 pt-1 flex items-center gap-2 text-sm"><div class="flex -space-x-2">${g.begenenler.slice(0, 3).map((a, i) => `<span class="w-6 h-6 rounded-full border border-[#0d0818] flex items-center justify-center text-[10px] font-bold" style="background:${["#ff2e88", "#00e5ff", "#ffd166"][i % 3]}">${esc((a || "?")[0])}</span>`).join("")}</div><span>${g.begenenler.length === 1 ? `<b>${esc(g.begenenler[0])}</b> beğendi` : `<b>${esc(g.begenenler[0])}</b> ve <b>${g.begenenler.length - 1} kişi daha</b> beğendi`}</span></div>` : `<p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>`}
-        ${g.benim ? `<button data-act="dbGonderiSil" data-id="${g.id}" class="px-1 pt-1 text-xs text-rose-400 text-left">🗑️ Gönderiyi sil</button>` : ""}
+        ${g.begeniGizli && !g.benim ? '<p class="px-1 pt-1 text-sm text-slate-400">Beğeniler gizlendi</p>' : g.benim && g.begenenler.length ? `<div class="px-1 pt-1 flex items-center gap-2 text-sm"><div class="flex -space-x-2">${g.begenenler.slice(0, 3).map((a, i) => `<span class="w-6 h-6 rounded-full border border-[#0d0818] flex items-center justify-center text-[10px] font-bold" style="background:${["#ff2e88", "#00e5ff", "#ffd166"][i % 3]}">${esc((a || "?")[0])}</span>`).join("")}</div><span>${g.begenenler.length === 1 ? `<b>${esc(g.begenenler[0])}</b> beğendi` : `<b>${esc(g.begenenler[0])}</b> ve <b>${g.begenenler.length - 1} kişi daha</b> beğendi`}</span></div>` : `<p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>`}
         ${aciklama}
         <button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>
         ${acik ? `
@@ -3387,10 +3539,18 @@ document.addEventListener('click', e => {
     case 'sohbetAc': modalKapat(); sohbetAc(d.id); render(); break;
     case 'sohbetKapat': st.sohbetId = null; render(); break;
     case 'gonder': gonder(d.id); break;
-    case 'hikayeben':
-      if (sonHikaye()) hikayeAc({ad: BEN.ad, grad: BEN.grad, foto: sonHikaye(), metin: 'Hikayen 24 saat görünür ✨'});
-      else $('#hikayeDosya').click();
-      break;
+    case 'hikayeben': hikayeMenu(); break;
+    case 'hikayeEkle': $('#hikayeDosya').click(); break;
+    case 'hikayeGor': hikayeGor(); break;
+    case 'oynatIleri': oynatIleri(); break;
+    case 'oynatGeri': oynatGeri(); break;
+    case 'oynatKapat': oynatKapat(); break;
+    case 'dbPaylas': dbPaylas(d.id); break;
+    case 'gonderiMenu': gonderiMenu(d.id); break;
+    case 'gonderiDuzenle': gonderiDuzenle(d.id); break;
+    case 'gonderiDuzenleKaydet': gonderiDuzenleKaydet(d.id); break;
+    case 'begeniGizle': begeniGizle(d.id); break;
+    case 'gonderiSilMenu': modalKapat(); dbGonderiSil(d.id); break;
     case 'hikaye': {
       const h = st.hikayeler[+d.i];
       if (h) { h.goruldu = true; hikayeAc(h); }
