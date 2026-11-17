@@ -1798,6 +1798,7 @@ function oynatGoster() {
         <span class="font-semibold text-sm truncate">${esc(grup.ad)}</span>
         <span class="text-[11px] text-slate-300">${zamanYaz(s.created_at)}</span>
         ${grup.uid == (st.kullanici && st.kullanici.id) ? '<button data-act="hikayeEkle" class="ml-auto text-xl px-2" aria-label="Yeni hikaye">＋</button>' : ""}
+        ${grup.uid == (st.kullanici && st.kullanici.id) ? `<button data-act="hikayeMenuAc" data-id="${s.id}" class="text-xl px-2" aria-label="Seçenekler">⋯</button>` : ""}
         <button data-act="oynatKapat" class="${grup.uid == (st.kullanici && st.kullanici.id) ? "" : "ml-auto "}text-xl px-2" aria-label="Kapat">✕</button>
       </div>
       ${grup.uid == (st.kullanici && st.kullanici.id) ? "" : `<div class="absolute bottom-5 left-3 right-16 z-20 flex gap-2"><input id="oynatYanit" maxlength="120" placeholder="Hikayeye yanıt yaz…" onfocus="clearTimeout(st.oynZ)" class="flex-1 bg-black/40 border border-white/20 rounded-full px-4 py-2 text-sm outline-none focus:border-cyan-400"><button data-act="oynatYanitGonder" data-id="${grup.uid}" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Gönder</button></div>`}
@@ -2733,6 +2734,44 @@ async function hesapEkleKaydet() {
   toast("Hesap eklendi ✅");
   hesapMenuAc();
 }
+/* ---------- Hikaye silme (yalnızca kendi hikayem) ---------- */
+// Seçenekler: kırmızı "Hikayeyi Sil"
+function hikayeMenuAc(sid) {
+  modalAc(`
+    <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
+    <div class="absolute left-0 right-0 bottom-0 bg-[#0d0818] rounded-t-3xl p-5 pb-8 giris border-t border-white/10 space-y-2">
+      <div class="mx-auto w-10 h-1 rounded-full bg-white/20 mb-3"></div>
+      <button data-act="hikayeSilOnay" data-id="${sid}" class="w-full py-3 rounded-xl bg-rose-500 text-white font-bold text-sm">🗑️ Hikayeyi Sil</button>
+      <button data-act="modalKapat" class="w-full py-2 text-sm text-slate-300">Vazgeç</button>
+    </div>`);
+}
+
+// Onay penceresi
+function hikayeSilOnay(sid) {
+  modalAc(`
+    <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
+    <div class="absolute left-4 right-4 bottom-10 mx-auto max-w-sm bg-[#0d0818] rounded-3xl p-6 giris border border-white/10 text-center space-y-4">
+      <h2 class="text-lg font-black text-white">Bu hikayeyi silmek istediğine emin misin?</h2>
+      <p class="text-xs text-slate-300">Bu işlem geri alınamaz.</p>
+      <div class="flex gap-2">
+        <button data-act="modalKapat" class="flex-1 py-2.5 rounded-full border border-white/30 text-white text-sm">Vazgeç</button>
+        <button data-act="hikayeSil" data-id="${sid}" class="flex-1 py-2.5 rounded-full bg-rose-500 text-white font-bold text-sm">Sil</button>
+      </div>
+    </div>`);
+}
+
+// Sunucudan siler; beğeni, görüntüleme ve öne çıkarma kayıtları ilişkiyle birlikte gider
+async function hikayeSil(sid) {
+  if (!sb || !st.kullanici) return;
+  const {data, error} = await sb.from("hikayeler").delete().eq("id", Number(sid)).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Silinemedi: " + (error ? error.message : "yetki yok")); return; }
+  st.oyn = null;
+  modalKapat();
+  toast("Hikaye silindi");
+  await Promise.all([hikayeYukle(), highlightYukle()]);
+  render();
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -4419,6 +4458,9 @@ document.addEventListener('click', e => {
     case 'oynatGeri': oynatGeri(); break;
     case 'oynatKapat': oynatKapat(); break;
     case 'hikayeGoruntuleyenler': hikayeGoruntuleyenler(d.id); break;
+    case 'hikayeMenuAc': hikayeMenuAc(d.id); break;
+    case 'hikayeSilOnay': hikayeSilOnay(d.id); break;
+    case 'hikayeSil': hikayeSil(d.id); break;
     case 'oynatYanitGonder': oynatYanitGonder(d.id); break;
     case 'dbPaylas': dbPaylas(d.id); break;
     case 'gonderiMenu': gonderiMenu(d.id); break;
