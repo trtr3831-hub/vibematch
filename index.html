@@ -230,6 +230,9 @@ const st = {
   dbReeller: [],
   bekleyenSes: null,
   gfFoto: null,
+  dbKonusmalar: [],
+  dbSohbetAcik: null,
+  dbSohbetMesajlar: [],
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -578,6 +581,7 @@ function sohbetHTML(id) {
 }
 
 function mesajHTML() {
+  if (st.dbSohbetAcik != null) return dbSohbetHTML();
   if (st.grupAcik != null) return grupHTML(st.grupAcik);
   if (st.sohbetId != null) return sohbetHTML(st.sohbetId);
   const grupBolumu = `
@@ -599,6 +603,7 @@ function mesajHTML() {
       ${notRozetHTML()}
       ${st.eslesmeler.map(id => { const p = kisi(id); return p && p.not ? `<div class="flex flex-col items-center gap-1 w-20 shrink-0"><div class="relative w-16 h-16 rounded-full flex items-center justify-center font-black" style="background:${p.grad}">${esc(p.ad[0])}<span class="absolute -top-3 left-1/2 -translate-x-1/2 max-w-[90px] truncate bg-white text-black text-[10px] px-2 py-1 rounded-xl">${esc(p.not)}</span></div><span class="text-[11px] text-slate-300 truncate w-full text-center">${esc(p.ad)}</span></div>` : ""; }).join("")}
     </div>
+    ${dbKonusmaHTML()}
     ${gelenReelHTML()}
     <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Eşleşmeler</h3>
     <div class="kaydir overflow-x-auto flex gap-4 mb-5 -mx-4 px-4">
@@ -2666,6 +2671,7 @@ async function reelGonder(alici, reelId) {
 
 async function mesajYukle() {
   if (!sb || !st.kullanici) return;
+  await dbKonusmaYukle();
   const {data} = await sb.from("mesajlar_db").select("id,gonderen,reel_id,created_at").eq("alici", st.kullanici.id).not("reel_id", "is", null).order("created_at", {ascending: false}).limit(20);
   const ids = [...new Set((data || []).map(m => m.gonderen))];
   const adlar = {};
@@ -2675,6 +2681,95 @@ async function mesajYukle() {
   }
   st.dbMesajlar = (data || []).map(m => Object.assign({}, m, {gonderenAd: adlar[m.gonderen] || "Biri"}));
   render();
+}
+
+/* ---------- Gerçek mesajlaşma (veritabanı) ---------- */
+async function dbKonusmaYukle() {
+  if (!sb || !st.kullanici) return;
+  const benim = st.kullanici.id;
+  const {data} = await sb.from("mesajlar_db").select("gonderen,alici,metin,created_at").is("reel_id", null).or("gonderen.eq." + benim + ",alici.eq." + benim).order("created_at", {ascending: false}).limit(200);
+  const gorulen = {};
+  (data || []).forEach(m => {
+    const diger = m.gonderen === benim ? m.alici : m.gonderen;
+    if (!gorulen[diger]) gorulen[diger] = {id: diger, son: m.metin || "", zaman: m.created_at};
+  });
+  const ids = Object.keys(gorulen);
+  const adlar = {};
+  if (ids.length) {
+    const {data: pr} = await sb.from("profiles").select("id,ad").in("id", ids);
+    (pr || []).forEach(p => { adlar[p.id] = p.ad; });
+  }
+  st.dbKonusmalar = ids.map(id => Object.assign(gorulen[id], {ad: adlar[id] || "Kullanıcı"}));
+}
+
+async function dbSohbetYukle(diger) {
+  if (!sb || !st.kullanici) return;
+  const benim = st.kullanici.id;
+  const {data} = await sb.from("mesajlar_db").select("id,gonderen,alici,metin,created_at").is("reel_id", null)
+    .or("and(gonderen.eq." + benim + ",alici.eq." + diger + "),and(gonderen.eq." + diger + ",alici.eq." + benim + ")")
+    .order("created_at", {ascending: true}).limit(200);
+  st.dbSohbetMesajlar = data || [];
+}
+
+function dbSohbetHTML() {
+  const p = st.dbProfiller[st.dbSohbetAcik] || kisi(st.dbSohbetAcik) || {ad: "Kullanıcı"};
+  const konusma = st.dbKonusmalar.find(k => k.id == st.dbSohbetAcik);
+  const ad = p.ad || (konusma ? konusma.ad : "Kullanıcı");
+  return `
+  <div class="flex flex-col min-h-full giris">
+    <div class="flex items-center gap-3 pb-3 border-b border-white/10 sticky top-0 bg-[#0d0818] z-10">
+      <button data-act="dbSohbetKapat" class="text-xl px-2" aria-label="Geri">←</button>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-black" style="background:${dbGrad(st.dbSohbetAcik)}">${esc((ad || "?")[0])}</div>
+      <div class="font-semibold">${esc(ad)}</div>
+    </div>
+    <div id="dbMesajKutu" class="flex-1 space-y-2 py-3">${dbBalonlar()}</div>
+    <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
+      <input id="dbMesajGiris" maxlength="200" placeholder="Bir mesaj yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 outline-none focus:border-cyan-400 text-sm">
+      <button data-act="dbMesajGonder" class="px-4 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-sm">Gönder</button>
+    </div>
+  </div>`;
+}
+
+function dbBalonlar() {
+  const benim = st.kullanici ? st.kullanici.id : null;
+  if (!st.dbSohbetMesajlar.length) return '<p class="text-center text-xs text-slate-500 py-10">Henüz mesaj yok. İlk mesajı sen yaz.</p>';
+  return st.dbSohbetMesajlar.map(m => {
+    const bende = m.gonderen === benim;
+    const saat = new Date(m.created_at).toLocaleTimeString("tr-TR", {hour: "2-digit", minute: "2-digit"});
+    return bende
+      ? `<div class="flex justify-end"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-br-sm bg-gradient-to-r from-pink-500 to-fuchsia-600 text-sm">${esc(m.metin)}<div class="text-[10px] text-white/70 mt-0.5 text-right">${saat}</div></div></div>`
+      : `<div class="flex"><div class="max-w-[78%] px-3 py-2 rounded-2xl rounded-bl-sm bg-white/10 text-sm">${esc(m.metin)}<div class="text-[10px] text-slate-400 mt-0.5">${saat}</div></div></div>`;
+  }).join("");
+}
+
+async function dbMesajGonder() {
+  const inp = document.getElementById("dbMesajGiris");
+  const t = inp ? inp.value.trim() : "";
+  if (!t || !st.dbSohbetAcik) return;
+  const {error} = await sb.from("mesajlar_db").insert({alici: st.dbSohbetAcik, metin: t.slice(0, 200)});
+  if (error) return toast("Gönderilemedi: " + error.message);
+  await dbSohbetYukle(st.dbSohbetAcik);
+  render();
+  const yeni = document.getElementById("dbMesajGiris");
+  if (yeni) yeni.focus();
+}
+
+async function dbSohbetAc(id) {
+  st.dbSohbetAcik = id;
+  st.sohbetId = null;
+  st.grupAcik = null;
+  await dbSohbetYukle(id);
+  render();
+}
+
+function dbKonusmaHTML() {
+  if (!st.dbKonusmalar.length) return "";
+  return `<h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Mesajlar</h3>` + st.dbKonusmalar.map(k => `
+    <button data-act="dbSohbetAc" data-id="${k.id}" class="w-full flex items-center gap-3 py-3 border-b border-white/10 text-left">
+      <div class="w-12 h-12 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(k.id)}">${esc((k.ad || "?")[0])}</div>
+      <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">${esc(k.ad)}</div><div class="text-xs text-slate-400 truncate">${esc(k.son)}</div></div>
+      <div class="text-[10px] text-slate-500">${zamanYaz(k.zaman)}</div>
+    </button>`).join("") + `<div class="mb-4"></div>`;
 }
 
 function gelenReelHTML() {
@@ -3125,6 +3220,9 @@ document.addEventListener('click', e => {
     case 'olusturAc': olusturAc(); break;
     case 'olustur': olustur(d.tur); break;
     case 'gfPaylas': gfPaylas(); break;
+    case 'dbSohbetAc': dbSohbetAc(d.id); break;
+    case 'dbSohbetKapat': st.dbSohbetAcik = null; render(); break;
+    case 'dbMesajGonder': dbMesajGonder(); break;
     case 'gfFotoSec': $('#gfDosya').click(); break;
     case 'gonderiEkle': gonderiFormAc(); break;
     case 'arsivAc': arsivAc(); break;
@@ -3145,6 +3243,7 @@ document.addEventListener('keydown', e => {
   if (e.target.id && e.target.id.indexOf('yorum-') === 0) yorumGonder(e.target.id.slice(6));
   if (e.target.id === 'grupGiris' && st.grupAcik != null) grupGonder(st.grupAcik);
   if (e.target.id === 'aramaGiris') aramaYap();
+  if (e.target.id === 'dbMesajGiris') dbMesajGonder();
   if (e.target.id && e.target.id.indexOf('dbyorum-') === 0) dbYorumGonder(e.target.id.slice(8));
   if (e.target.id === 'notGiris') {
     const b = document.querySelector('[data-act="notKaydet"]');
@@ -3180,6 +3279,13 @@ st.gonderiler[1].yorumlar.push({ad: "Mert", metin: "Ben de geliyorum ☕", zaman
 desteOlustur();
 render();
 setInterval(() => { if (hikayeleriTemizle() && st.sekme === 'akis') render(); }, 60000);
+
+setInterval(async () => {
+  if (st.dbSohbetAcik == null || st.sekme !== 'mesajlar') return;
+  await dbSohbetYukle(st.dbSohbetAcik);
+  const kutu = document.getElementById('dbMesajKutu');
+  if (kutu) kutu.innerHTML = dbBalonlar();
+}, 8000);
 
 /* Müzik oynatıcı ilerlemesi (prototip: sahte ilerleme) */
 setInterval(() => {
