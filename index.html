@@ -240,6 +240,8 @@ const st = {
   dbHikayeler: [],
   dbArsiv: [],
   dbHighlight: [],
+  vBegeniGizli: false,
+  vYorumKapali: false,
   arsivSecim: [],
   hlAktif: null,
   hlSira: 0,
@@ -1937,6 +1939,29 @@ function hikayeGor() {
   oynatAc(benim, [{uid: benim, ad: BEN.ad, grad: BEN.grad, hikayeler: aktif}]);
 }
 
+// Hesap tercihleri (gizlilik ve gönderi varsayılanları) sunucudan
+async function ayarlarYukle() {
+  if (!sb || !st.kullanici) return;
+  const {data} = await sb.from("profiles").select("gizlilik,varsayilan_begeni_gizli,varsayilan_yorum_kapali").eq("id", st.kullanici.id).maybeSingle();
+  if (!data) return;
+  st.gizlilik = data.gizlilik === "takipci" ? "takipci" : "herkes";
+  st.vBegeniGizli = !!data.varsayilan_begeni_gizli;
+  st.vYorumKapali = !!data.varsayilan_yorum_kapali;
+  if (st.sekme === "profil") render();
+}
+
+// Gönderide yorumları aç/kapat (sunucu da yeni yorumu reddeder)
+async function yorumKapat(id) {
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g || !g.benim || !sb) return;
+  const yeni = !g.yorumKapali;
+  const {data, error} = await sb.from("gonderiler").update({yorum_kapali: yeni}).eq("id", id).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Ayar kaydedilemedi: " + (error ? error.message : "yetki yok")); return; }
+  modalKapat();
+  toast(yeni ? "Yorumlar kapatıldı" : "Yorumlar açıldı");
+  gonderiYukle();
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -1959,6 +1984,7 @@ function gonderiMenu(id) {
       ${g.benim ? `
         <button data-act="gonderiDuzenle" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">✏️ Düzenle</button>
         <button data-act="begeniGizle" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">${g.begeniGizli ? "👁️ Beğenileri göster" : "🙈 Beğenileri gizle"}</button>
+        <button data-act="yorumKapat" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">${g.yorumKapali ? "💬 Yorumları aç" : "🚫 Yorumları kapat"}</button>
         <button data-act="gonderiSilMenu" data-id="${id}" class="py-3 rounded-full border border-rose-400 text-rose-300 font-semibold">🗑️ Sil</button>`
         : `<button data-act="dbPaylas" data-id="${id}" class="py-3 rounded-full bg-white/10 font-semibold">🔗 Bağlantıyı paylaş</button>`}
       <button data-act="modalKapat" class="text-sm text-slate-400">Kapat</button>
@@ -2305,7 +2331,7 @@ function oturumAc(user) {
   girisEkraniGizle();
   toast('Hoş geldin, ' + ad + ' 👋');
   render();
-  profilDbKaydet().then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle).then(hikayeYukle).then(highlightYukle);
+  profilDbKaydet().then(ayarlarYukle).then(takipVerileriYukle).then(notYukle).then(gonderiYukle).then(mesajYukle).then(bildirimYukle).then(hikayeYukle).then(highlightYukle);
 }
 
 async function hesapGiris() {
@@ -2833,7 +2859,7 @@ async function gonderiYukle() {
   if (!sb || !st.kullanici) return;
   st.gonderiYuklendi = true;
   const benim = st.kullanici.id;
-  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at,begeni_gizli").order("created_at", {ascending: false}).limit(60);
+  const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at,begeni_gizli,yorum_kapali").order("created_at", {ascending: false}).limit(60);
   const ids = (gs || []).map(g => g.id);
   let begeniler = [], yorumlar = [], sayiMap = {}, begenAdlari = {};
   if (ids.length) {
@@ -2854,6 +2880,7 @@ async function gonderiYukle() {
     metin: g.metin || "", foto: g.foto, fotolar: g.fotolar || (g.foto ? [g.foto] : []), ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
     begeni: sayiMap[g.id] || 0,
     begeniGizli: !!g.begeni_gizli,
+    yorumKapali: !!g.yorum_kapali,
     begenenler: (g.user_id === benim) ? begeniler.filter(x => x.gonderi_id === g.id).map(x => begenAdlari[x.user_id] || "Kullanıcı") : [],
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
@@ -2874,7 +2901,7 @@ async function dbGonderiPaylas(metin, foto, ses, fotolar) {
     if (hata) return toast("Şarkı yüklenemedi: " + hata.message);
     sesUrl = sb.storage.from("sesler").getPublicUrl(yol).data.publicUrl;
   }
-  const {error} = await sb.from("gonderiler").insert({yazar: BEN.ad, sehir: BEN.sehir, metin: metin || "", foto: foto || null, fotolar: fotolar && fotolar.length > 1 ? fotolar : null, ses: sesUrl});
+  const {error} = await sb.from("gonderiler").insert({yazar: BEN.ad, sehir: BEN.sehir, metin: metin || "", foto: foto || null, fotolar: fotolar && fotolar.length > 1 ? fotolar : null, ses: sesUrl, begeni_gizli: !!st.vBegeniGizli, yorum_kapali: !!st.vYorumKapali});
   if (error) return toast("Paylaşılamadı: " + error.message);
   toast("Paylaşıldı ✨");
   gonderiYukle();
@@ -2946,14 +2973,15 @@ async function gonderiDetay(id) {
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-black">Gönderi</h2>
-        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+        <span class="flex items-center gap-3"><button data-act="gonderiMenu" data-id="${g.id}" class="text-xl px-1 text-slate-400" aria-label="Seçenekler">⋯</button><button data-act="modalKapat" class="text-slate-400 text-xl">✕</button></span>
       </div>
       ${medya}
       ${g.metin && listeFoto.length ? `<p class="text-sm mt-3">${esc(g.metin)}</p>` : ""}
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">❤️ ${g.begeni} beğeni</h3>
+      ${g.begeniGizli && !g.benim ? "" : `<h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">❤️ ${g.begeni} beğeni</h3>`}
       ${begenenler}
       <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">💬 ${g.yorumlar.length} yorum</h3>
       ${yorumlar}
+      ${g.yorumKapali ? '<p class="text-xs text-slate-500 mt-2">Yorumlar kapatıldı</p>' : ""}
     </div>`);
 }
 
@@ -3049,13 +3077,13 @@ function dbGonderiHTML(g) {
         </div>
         ${g.begeniGizli && !g.benim ? '<p class="px-1 pt-1 text-sm text-slate-400">Beğeniler gizlendi</p>' : g.benim && g.begenenler.length ? `<div class="px-1 pt-1 flex items-center gap-2 text-sm"><div class="flex -space-x-2">${g.begenenler.slice(0, 3).map((a, i) => `<span class="w-6 h-6 rounded-full border border-[#0d0818] flex items-center justify-center text-[10px] font-bold" style="background:${["#ff2e88", "#00e5ff", "#ffd166"][i % 3]}">${esc((a || "?")[0])}</span>`).join("")}</div><span>${g.begenenler.length === 1 ? `<b>${esc(g.begenenler[0])}</b> beğendi` : `<b>${esc(g.begenenler[0])}</b> ve <b>${g.begenenler.length - 1} kişi daha</b> beğendi`}</span></div>` : `<p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>`}
         ${aciklama}
-        <button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>
+        ${g.yorumKapali ? '<p class="px-1 pt-1 text-xs text-slate-500">Yorumlar kapatıldı</p>' : `<button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>`}
         ${acik ? `
           <div class="space-y-1 px-1 pt-2">${yorumListe}</div>
-          <div class="flex gap-2 pt-2">
+          ${g.yorumKapali ? "" : `<div class="flex gap-2 pt-2">
             <input id="dbyorum-${g.id}" maxlength="150" placeholder="Yorum yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs outline-none focus:border-cyan-400">
             <button data-act="dbYorumGonder" data-id="${g.id}" class="px-3 rounded-full bg-cyan-400 text-black text-xs font-bold">Gönder</button>
-          </div>` : ""}
+          </div>`}` : ""}
       </article>`;
 }
 
@@ -3461,6 +3489,20 @@ function ayarlarAc() {
           </select>
         </div>
         <div>
+          <label class="text-xs text-slate-400">Yeni gönderilerde beğeni sayısı</label>
+          <select id="ayarBegeniGizli" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+            <option value="0" ${!st.vBegeniGizli ? "selected" : ""}>Herkes görsün</option>
+            <option value="1" ${st.vBegeniGizli ? "selected" : ""}>Gizli (sayı gösterilmez)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Yeni gönderilerde yorumlar</label>
+          <select id="ayarYorumKapali" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+            <option value="0" ${!st.vYorumKapali ? "selected" : ""}>Açık</option>
+            <option value="1" ${st.vYorumKapali ? "selected" : ""}>Kapalı</option>
+          </select>
+        </div>
+        <div>
           <label class="text-xs text-slate-400">Yaş</label>
           <input id="ayarYas" type="number" min="18" max="99" value="${BEN.yas}" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
         </div>
@@ -3503,6 +3545,14 @@ async function ayarKaydet() {
       if (r.error) return ayarMesaj(hataMetni(r.error), true);
     }
   }
+  const vBegeni = document.getElementById("ayarBegeniGizli").value === "1";
+  const vYorum = document.getElementById("ayarYorumKapali").value === "1";
+  if (sb && st.kullanici) {
+    const {error: pe} = await sb.from("profiles").update({gizlilik, varsayilan_begeni_gizli: vBegeni, varsayilan_yorum_kapali: vYorum}).eq("id", st.kullanici.id);
+    if (pe) return ayarMesaj("Tercihler kaydedilemedi: " + pe.message, true);
+  }
+  st.vBegeniGizli = vBegeni;
+  st.vYorumKapali = vYorum;
   BEN.ad = ad;
   BEN.yas = yas;
   BEN.bio = bio;
@@ -3550,6 +3600,7 @@ document.addEventListener('click', e => {
     case 'gonderiDuzenle': gonderiDuzenle(d.id); break;
     case 'gonderiDuzenleKaydet': gonderiDuzenleKaydet(d.id); break;
     case 'begeniGizle': begeniGizle(d.id); break;
+    case 'yorumKapat': yorumKapat(d.id); break;
     case 'gonderiSilMenu': modalKapat(); dbGonderiSil(d.id); break;
     case 'hikaye': {
       const h = st.hikayeler[+d.i];
