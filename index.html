@@ -233,6 +233,7 @@ const st = {
   dbKonusmalar: [],
   dbSohbetAcik: null,
   dbSohbetMesajlar: [],
+  kaydedilen: [],
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -826,6 +827,7 @@ function ayarlarHTML() {
   <div class="giris pb-6 space-y-6 pt-2">
     <section>${liderHTML()}</section>
     <section><button data-act="arsivAc" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">🗂️ Hikaye arşivi</button></section>
+    <section><button data-act="kaydedilenlerAc" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">🔖 Kaydedilenler</button></section>
     <h2 class="text-2xl font-black neon">Ayarlar</h2>
 
     <section>
@@ -2547,6 +2549,10 @@ async function gonderiYukle() {
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
   }));
+  if (sb && st.kullanici) {
+    const {data: kay} = await sb.from("kaydedilenler").select("gonderi_id").eq("user_id", benim);
+    st.kaydedilen = (kay || []).map(k => k.gonderi_id);
+  }
   render();
 }
 
@@ -2571,6 +2577,37 @@ async function dbGonderiSil(id) {
   if (error) return toast("Silinemedi: " + error.message);
   toast("Gönderi silindi");
   gonderiYukle();
+}
+
+async function dbKaydet(id) {
+  if (!sb || !st.kullanici) return;
+  const n = Number(id);
+  if (st.kaydedilen.includes(n)) {
+    await sb.from("kaydedilenler").delete().eq("user_id", st.kullanici.id).eq("gonderi_id", n);
+    toast("Kayıtlardan çıkarıldı");
+  } else {
+    await sb.from("kaydedilenler").insert({gonderi_id: n});
+    toast("Kaydedildi 🔖");
+  }
+  gonderiYukle();
+}
+
+function kaydedilenlerAc() {
+  const liste = st.dbGonderiler.filter(g => st.kaydedilen.includes(g.id));
+  const icerik = liste.length
+    ? `<div class="grid grid-cols-3 gap-1">${liste.map(g => `
+         <div class="aspect-square rounded-lg overflow-hidden" style="background:${g.grad}">
+           ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
+         </div>`).join("")}</div>`
+    : `<p class="text-center text-slate-400 py-10">Henüz kaydettiğin bir gönderi yok. Gönderide 📑 simgesine dokun.</p>`;
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black">Kaydedilenler</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      ${icerik}
+    </div>`);
 }
 
 async function dbBegen(id) {
@@ -2620,6 +2657,7 @@ function dbGonderiHTML(g) {
         <div class="flex items-center gap-4 px-1 pt-2">
           <button data-act="dbBegen" data-id="${g.id}" class="text-xl" aria-label="Beğen">${g.begendim ? "❤️" : "🤍"}</button>
           <button data-act="dbYorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
+          <button data-act="dbKaydet" data-id="${g.id}" class="text-xl ml-auto" aria-label="Kaydet">${st.kaydedilen.includes(g.id) ? "🔖" : "📑"}</button>
         </div>
         <p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>
         ${g.benim ? `<button data-act="dbGonderiSil" data-id="${g.id}" class="px-1 pt-1 text-xs text-rose-400 text-left">🗑️ Gönderiyi sil</button>` : ""}
@@ -3205,6 +3243,8 @@ document.addEventListener('click', e => {
     case 'reelAlici': reelGonder(d.id, d.reel); break;
     case 'reelAc': reelAc(d.id); break;
     case 'dbBegen': dbBegen(d.id); break;
+    case 'dbKaydet': dbKaydet(d.id); break;
+    case 'kaydedilenlerAc': kaydedilenlerAc(); break;
     case 'dbGonderiSil': dbGonderiSil(d.id); break;
     case 'dbYorumAc': st.dbAcikYorum = st.dbAcikYorum == d.id ? null : d.id; render(); break;
     case 'dbYorumGonder': dbYorumGonder(d.id); break;
