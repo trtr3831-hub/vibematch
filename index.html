@@ -146,12 +146,13 @@
         <button data-act="authMod" data-m="giris" class="flex-1 py-2 rounded-full border border-white/20 text-sm">Giriş</button>
         <button data-act="authMod" data-m="kayit" class="flex-1 py-2 rounded-full border border-white/20 text-sm">Kayıt</button>
       </div>
-      <div id="authAdAlan" class="mb-2"><input id="authAd" maxlength="30" placeholder="Adın" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400"></div>
+      <div id="authAdAlan" class="mb-2 hidden"><input id="authAd" maxlength="30" placeholder="Adın" class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400"></div>
       <input id="authEmail" type="email" placeholder="E-posta" class="w-full mb-2 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
       <input id="authSifre" type="password" placeholder="Şifre (en az 6 karakter)" class="w-full mb-3 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
-      <button id="authButon" data-act="authSubmit" data-m="kayit" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Kayıt ol</button>
+      <button id="authButon" data-act="authSubmit" data-m="giris" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Giriş yap</button>
       <p id="girisMesaj" class="text-xs text-center min-h-[1rem] mt-3"></p>
       <button data-act="sifreUnuttum" class="mt-2 text-xs text-cyan-300 underline">Şifremi unuttum</button>
+      <button id="sifreGeri" data-act="authMod" data-m="giris" class="hidden mt-2 text-xs text-slate-300 underline">← Girişe dön</button>
       <button data-act="demoGiris" class="mt-4 text-xs text-slate-400 underline">Demo ile devam et (sunucusuz)</button>
     </div>
   </div>
@@ -3307,6 +3308,17 @@ async function cikis() {
 /* Şifre sıfırlama */
 const SITE_URL = "https://vibematch-app.pages.dev";
 
+// Şifremi unuttum: yalnızca e-posta alanı; gönder düğmesi sıfırlama bağlantısını yollar
+function sifreModu() {
+  $('#authAdAlan').classList.add('hidden');
+  $('#girisEkrani #authSifre').classList.add('hidden');
+  const b = $('#authButon');
+  b.textContent = 'Sıfırlama bağlantısı gönder';
+  b.dataset.m = 'sifirla';
+  $('#sifreGeri').classList.remove('hidden');
+  girisMesaj('E-postanı yaz, şifreni sıfırlaman için bağlantı gönderelim.', false);
+}
+
 async function sifreSifirlaIste() {
   const email = $('#authEmail').value.trim();
   if (!sb) return girisMesaj('Sunucu bağlı değil.', true);
@@ -3321,6 +3333,8 @@ function yeniSifreModu() {
   st.sifreYenileme = true;
   girisEkraniGoster();
   $('#authAdAlan').classList.add('hidden');
+  $('#girisEkrani #authSifre').classList.remove('hidden');
+  $('#sifreGeri').classList.add('hidden');
   const b = $('#authButon');
   b.textContent = 'Yeni şifreyi kaydet';
   b.dataset.m = 'yeni';
@@ -3346,7 +3360,9 @@ if (sb) {
 
 /* Açılışta mevcut oturumu kontrol et */
 if (sb) {
+  const kurtarma = location.hash.indexOf('type=recovery') !== -1;
   sb.auth.getSession().then(({data}) => {
+    if (kurtarma) { yeniSifreModu(); return; }
     if (data && data.session) oturumAc(data.session.user);
     else girisEkraniGoster();
   });
@@ -4543,6 +4559,8 @@ document.addEventListener('click', e => {
     case 'authMod': {
       const kayit = d.m === 'kayit';
       $('#authAdAlan').classList.toggle('hidden', !kayit);
+      $('#girisEkrani #authSifre').classList.remove('hidden');
+      $('#sifreGeri').classList.add('hidden');
       const b = $('#authButon');
       b.textContent = kayit ? 'Kayıt ol' : 'Giriş yap';
       b.dataset.m = kayit ? 'kayit' : 'giris';
@@ -4552,9 +4570,10 @@ document.addEventListener('click', e => {
     case 'authSubmit':
       if (d.m === 'kayit') hesapKayit();
       else if (d.m === 'yeni') yeniSifreKaydet();
+      else if (d.m === 'sifirla') sifreSifirlaIste();
       else hesapGiris();
       break;
-    case 'sifreUnuttum': sifreSifirlaIste(); break;
+    case 'sifreUnuttum': sifreModu(); break;
     case 'demoGiris': girisEkraniGizle(); toast('Demo modundasın 🧪'); break;
     case 'cikis': cikis(); break;
     case 'sarkiEkle': {
