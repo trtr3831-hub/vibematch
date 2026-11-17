@@ -97,6 +97,8 @@
   body.acik #gorunum .text-white{color:#0f172a!important}
   button[aria-label="Gönderi seçenekleri"]{color:#fff}
   body.acik button[aria-label="Gönderi seçenekleri"]{color:#0f172a}
+  #yorumPanel button[data-act="ypKapat"]{color:#fff!important}
+  #yorumPanel .text-slate-400,#yorumPanel .text-slate-500{color:#cbd5e1!important}
 </style>
 </head>
 <body>
@@ -121,6 +123,7 @@
   </nav>
 
   <div id="modal" class="absolute inset-0 z-40 hidden"></div>
+  <div id="yorumPanel" class="absolute inset-0 z-[60] hidden"></div>
   <div id="toast" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-4 py-2 rounded-full text-sm font-semibold shadow-lg whitespace-nowrap"></div>
   <input type="file" id="hikayeDosya" accept="image/*" class="hidden">
   <input type="file" id="profilDosya" accept="image/*" class="hidden">
@@ -232,7 +235,6 @@ const st = {
   dbProfiller: {},
   takipciSayi: 0,
   dbGonderiler: [],
-  dbAcikYorum: null,
   dbReeller: [],
   bekleyenSes: null,
   gfFoto: null,
@@ -244,6 +246,9 @@ const st = {
   dbArsiv: [],
   dbHighlight: [],
   hbBegenen: {},
+  yp: null,
+  ypVeri: {liste: [], begeniler: []},
+  ypBasan: null,
   benGonderiSayi: 0,
   takipciMap: {},
   vBegeniGizli: false,
@@ -255,7 +260,6 @@ const st = {
   hlSira: 0,
   hlAcik: false,
   gfFotolar: [],
-  dbYanitAcik: null,
   profilMap: {},
   dbMesajlar: [],
   gizlilik: "herkes",
@@ -1962,6 +1966,192 @@ async function hbToggle(sid) {
   }
 }
 
+/* ---------- Yorum paneli (gönderi ve reels; alt kayar pencere) ---------- */
+function ypCfg(tur) {
+  return tur === "reel"
+    ? {yt: "reel_yorumlar", fk: "reel_id", bt: "reel_yorum_begeniler"}
+    : {yt: "yorumlar", fk: "gonderi_id", bt: "yorum_begeniler"};
+}
+
+async function yorumPanelAc(tur, id) {
+  if (!sb || !st.kullanici) { toast("Yorumlar için giriş yapmalısın"); return; }
+  st.yp = {tur: tur, id: Number(id), ust: null};
+  st.ypVeri = {liste: [], begeniler: []};
+  st.ypBasan = null;
+  const panel = document.getElementById("yorumPanel");
+  panel.innerHTML = `
+    <div class="absolute inset-0 bg-black/60" data-act="ypKapat"></div>
+    <div class="absolute inset-x-0 bottom-0 top-14 flex flex-col bg-[#0d0818] rounded-t-3xl border-t border-white/10 giris">
+      <div class="mx-auto w-10 h-1 rounded-full bg-white/20 mt-2"></div>
+      <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
+        <h2 class="font-black">Yorumlar <span id="ypSayi" class="text-sm font-normal text-slate-400"></span></h2>
+        <button data-act="ypKapat" class="text-xl px-1" aria-label="Kapat">✕</button>
+      </div>
+      <div id="ypListe" class="flex-1 overflow-y-auto px-5 py-3 space-y-4"><p class="text-center text-slate-400 py-10 text-sm">Yükleniyor…</p></div>
+      <div class="border-t border-white/10 px-4 pt-2 pb-4 space-y-2 bg-[#0d0818]">
+        <div id="ypChip" class="hidden"></div>
+        <div class="flex gap-2">
+          <input id="ypMetin" maxlength="150" placeholder="Yorum yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+          <button data-act="ypGonder" class="px-4 rounded-full bg-cyan-400 text-black font-bold text-sm">Gönder</button>
+        </div>
+      </div>
+    </div>`;
+  panel.classList.remove("hidden");
+  await ypYukle();
+}
+
+function ypKapat() {
+  const panel = document.getElementById("yorumPanel");
+  if (panel) { panel.classList.add("hidden"); panel.innerHTML = ""; }
+  st.yp = null;
+}
+
+async function ypYukle() {
+  if (!st.yp) return;
+  const cfg = ypCfg(st.yp.tur);
+  const {data} = await sb.from(cfg.yt).select("id,ust_id,user_id,yazar,metin,created_at").eq(cfg.fk, st.yp.id).order("created_at", {ascending: true}).limit(300);
+  const liste = data || [];
+  let begeniler = [];
+  if (liste.length) {
+    const {data: bd} = await sb.from(cfg.bt).select("yorum_id,user_id").in("yorum_id", liste.map(y => y.id));
+    begeniler = bd || [];
+  }
+  if (!st.yp) return;
+  st.ypVeri = {liste, begeniler};
+  ypCiz();
+}
+
+function ypCiz() {
+  const kutu = document.getElementById("ypListe");
+  if (!kutu || !st.yp) return;
+  const {liste, begeniler} = st.ypVeri;
+  const benim = st.kullanici.id;
+  const satir = (y, cevap) => {
+    const b = begeniler.filter(x => x.yorum_id === y.id);
+    const ben = b.some(x => x.user_id === benim);
+    return `
+      <div class="flex gap-3 ${cevap ? "ml-10" : ""}">
+        <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-black" style="background:${dbGrad(y.user_id || "x")}">${esc((y.yazar || "?")[0])}</div>
+        <div class="flex-1 min-w-0" data-act="ypYanitAc" data-id="${y.id}">
+          <p class="text-sm"><span class="font-semibold">${esc(y.yazar || "Kullanıcı")}</span> ${esc(y.metin)}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">${zamanYaz(y.created_at)} · <span class="text-slate-400">Yanıt ver</span></p>
+        </div>
+        <button data-act="ypBegen" data-id="${y.id}" class="flex flex-col items-center shrink-0 px-1" aria-label="Beğen">
+          <span class="inline-block text-base ${st.ypBasan == y.id ? "kalp bas" : ""}">${ben ? "❤️" : "🤍"}</span>
+          <span class="text-[10px] text-slate-400">${b.length || ""}</span>
+        </button>
+      </div>`;
+  };
+  const ustler = liste.filter(y => !y.ust_id);
+  const cevaplar = liste.filter(y => y.ust_id);
+  kutu.innerHTML = ustler.length
+    ? ustler.map(y => satir(y, false) + cevaplar.filter(c => c.ust_id === y.id).map(c => satir(c, true)).join("")).join("")
+    : '<p class="text-center text-slate-400 py-10 text-sm">Henüz yorum yok. İlk yorumu sen yaz.</p>';
+  document.getElementById("ypSayi").textContent = liste.length ? "· " + liste.length : "";
+}
+
+// Yoruma dokununca yanıt modu
+function ypYanitAc(id) {
+  if (!st.yp) return;
+  const y = st.ypVeri.liste.find(x => x.id == id);
+  if (!y) return;
+  const ust = y.ust_id || y.id;
+  const hedef = st.ypVeri.liste.find(x => x.id == ust);
+  st.yp.ust = ust;
+  const chip = document.getElementById("ypChip");
+  chip.className = "flex items-center justify-between text-xs text-cyan-300 bg-cyan-400/10 rounded-full px-3 py-1.5";
+  chip.innerHTML = `<span>${esc(hedef ? hedef.yazar : y.yazar)} kişisine yanıt veriliyor</span><button data-act="ypYanitIptal" class="px-1 text-slate-300" aria-label="Yanıtı iptal et">✕</button>`;
+  document.getElementById("ypMetin").focus();
+}
+
+function ypYanitIptal() {
+  if (st.yp) st.yp.ust = null;
+  const chip = document.getElementById("ypChip");
+  if (chip) { chip.className = "hidden"; chip.innerHTML = ""; }
+}
+
+async function ypGonder() {
+  if (!st.yp || !sb || !st.kullanici) return;
+  const inp = document.getElementById("ypMetin");
+  const t = inp ? inp.value.trim().slice(0, 150) : "";
+  if (!t) return;
+  const tur = st.yp.tur;
+  const cfg = ypCfg(tur);
+  const satir = {[cfg.fk]: st.yp.id, yazar: BEN.ad, metin: t};
+  if (st.yp.ust) satir.ust_id = st.yp.ust;
+  const {error} = await sb.from(cfg.yt).insert(satir);
+  if (error) { toast("Yorum gönderilemedi: " + error.message); return; }
+  if (tur === "gonderi") {
+    const g = st.dbGonderiler.find(x => x.id == st.yp.id);
+    if (g && g.sahip && g.sahip !== st.kullanici.id) await sb.from("bildirimler").insert({alici: g.sahip, tur: "yorum", metin: BEN.ad + " gönderine yorum yaptı: " + t.slice(0, 40)});
+    const ust = st.yp.ust ? st.ypVeri.liste.find(x => x.id == st.yp.ust) : null;
+    if (ust && ust.user_id && ust.user_id !== st.kullanici.id) await sb.from("bildirimler").insert({alici: ust.user_id, tur: "yanit", metin: BEN.ad + " yorumunuza yanıt verdi: " + t.slice(0, 60)});
+  }
+  inp.value = "";
+  ypYanitIptal();
+  await ypYukle();
+  if (tur === "gonderi") gonderiYukle();
+  if (tur === "reel") { await reelEtkilesimYukle(); reelsAc(); }
+}
+
+// Yorum beğenisi: anında kalp, sunucuya yazılır
+async function ypBegen(id) {
+  if (!st.yp || !sb || !st.kullanici) return;
+  const cfg = ypCfg(st.yp.tur);
+  const cid = Number(id);
+  const ben = st.ypVeri.begeniler.some(x => x.yorum_id === cid && x.user_id === st.kullanici.id);
+  const {error} = ben
+    ? await sb.from(cfg.bt).delete().eq("yorum_id", cid).eq("user_id", st.kullanici.id)
+    : await sb.from(cfg.bt).insert({yorum_id: cid});
+  if (error) { toast("Beğeni kaydedilemedi: " + error.message); return; }
+  st.ypBasan = ben ? null : cid;
+  setTimeout(() => { st.ypBasan = null; }, 700);
+  await ypYukle();
+}
+
+/* ---------- Reels etkileşimi (sunucu): beğeni ve yorum sayısı ---------- */
+async function reelEtkilesimYukle() {
+  if (!sb || !st.kullanici || !st.dbReeller.length) return;
+  const ids = st.dbReeller.map(r => r.id);
+  const [begRes, yorRes] = await Promise.all([
+    sb.from("reel_begeniler").select("reel_id,user_id").in("reel_id", ids),
+    sb.from("reel_yorumlar").select("reel_id").in("reel_id", ids)
+  ]);
+  const benim = st.kullanici.id;
+  const begeniler = begRes.data || [];
+  const yorumlar = yorRes.data || [];
+  st.dbReeller.forEach(r => {
+    const b = begeniler.filter(x => x.reel_id === r.id);
+    r.begeni = b.length;
+    r.begendim = b.some(x => x.user_id === benim);
+    r.yorumSayi = yorumlar.filter(x => x.reel_id === r.id).length;
+  });
+}
+
+async function reelBegenIsle(i) {
+  const r = reelListe()[i];
+  if (!r) return;
+  if (!r.db || !sb || !st.kullanici) {
+    r.begendim = !r.begendim;
+    r.begeni = (r.begeni || 0) + (r.begendim ? 1 : -1);
+    reelsAc();
+    return;
+  }
+  const acik = r.begendim;
+  r.begendim = !acik;
+  r.begeni = (r.begeni || 0) + (acik ? -1 : 1);
+  reelsAc();
+  const {error} = acik
+    ? await sb.from("reel_begeniler").delete().eq("reel_id", r.id).eq("user_id", st.kullanici.id)
+    : await sb.from("reel_begeniler").insert({reel_id: r.id});
+  if (error) {
+    r.begendim = acik;
+    r.begeni = (r.begeni || 0) + (acik ? 1 : -1);
+    reelsAc();
+    toast("Beğeni kaydedilemedi: " + error.message);
+  }
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -3113,7 +3303,7 @@ async function gonderiDetay(id) {
   const begenenler = !g.benim ? '<p class="text-xs text-slate-500">Beğenenleri yalnızca gönderi sahibi görebilir.</p>' : ids.length
     ? ids.map(u => `<div class="text-sm py-1">${esc(adlar[u] || "Kullanıcı")}</div>`).join("")
     : '<p class="text-xs text-slate-500">Henüz beğeni yok</p>';
-  const yorumlar = yorumAgaci(g.yorumlar, g.id);
+  const yorumlar = `<button data-act="yorumPanelAc" data-tur="gonderi" data-id="${g.id}" class="w-full py-2.5 rounded-full bg-white/10 font-semibold text-sm">Yorumları aç</button>`;
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
@@ -3143,53 +3333,11 @@ async function dbBegen(id) {
   gonderiYukle();
 }
 
-function yorumAgaci(liste, gonderiId) {
-  const ustler = liste.filter(y => !y.ust_id);
-  const cevaplar = liste.filter(y => y.ust_id);
-  if (!ustler.length) return '<p class="text-xs text-slate-500">Henüz yorum yok</p>';
-  return ustler.map(y => `
-    <div class="py-1">
-      <div class="text-sm"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(y.created_at)}</span>
-        <button data-act="dbYanitAc" data-id="${y.id}" class="text-[11px] text-slate-400 ml-1">Yanıtla</button></div>
-      ${cevaplar.filter(c => c.ust_id === y.id).map(c => `<div class="ml-6 text-sm mt-1"><span class="font-semibold">${esc(c.yazar)}</span> ${esc(c.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(c.created_at)}</span></div>`).join("")}
-      ${st.dbYanitAcik == y.id ? `<div class="flex gap-2 ml-6 mt-1"><input id="dbyanit-${y.id}" maxlength="150" placeholder="Yanıt yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs outline-none focus:border-cyan-400"><button data-act="dbYanitGonder" data-id="${gonderiId}" data-ust="${y.id}" class="px-3 rounded-full bg-cyan-400 text-black text-xs font-bold">Gönder</button></div>` : ""}
-    </div>`).join("");
-}
 
-function dbYanitAc(id) {
-  st.dbYanitAcik = st.dbYanitAcik == id ? null : id;
-  render();
-}
 
-async function dbYanitGonder(gonderiId, ustId) {
-  const inp = document.getElementById("dbyanit-" + ustId);
-  const t = inp ? inp.value.trim() : "";
-  if (!t) return;
-  const {error} = await sb.from("yorumlar").insert({gonderi_id: Number(gonderiId), ust_id: Number(ustId), yazar: BEN.ad, metin: t.slice(0, 150)});
-  if (error) return toast("Yanıt gönderilemedi: " + error.message);
-  const ustYorum = ((st.dbGonderiler.find(g => g.id == gonderiId) || {yorumlar: []}).yorumlar || []).find(y => y.id == ustId);
-  if (ustYorum && ustYorum.user_id && ustYorum.user_id !== st.kullanici.id) {
-    await sb.from("bildirimler").insert({alici: ustYorum.user_id, tur: "yanit", metin: BEN.ad + " yorumunuza yanıt verdi: " + t.slice(0, 60)});
-  }
-  st.dbAcikYorum = Number(gonderiId);
-  st.dbYanitAcik = null;
-  gonderiYukle();
-}
 
-async function dbYorumGonder(id) {
-  const inp = document.getElementById("dbyorum-" + id);
-  const t = inp ? inp.value.trim() : "";
-  if (!t) return;
-  const {error} = await sb.from("yorumlar").insert({gonderi_id: id, yazar: BEN.ad, metin: t.slice(0, 150)});
-  if (error) return toast("Yorum gönderilemedi: " + error.message);
-  const gonderi = st.dbGonderiler.find(x => x.id == id);
-  if (gonderi && gonderi.sahip && gonderi.sahip !== st.kullanici.id) await sb.from("bildirimler").insert({alici: gonderi.sahip, tur: "yorum", metin: BEN.ad + " gönderine yorum yaptı: " + t.slice(0, 40)});
-  st.dbAcikYorum = id;
-  gonderiYukle();
-}
 
 function dbGonderiHTML(g) {
-  const acik = st.dbAcikYorum == g.id;
   const fotoU = g.benim ? st.benFoto : (st.profilMap[g.sahip] || {}).foto;
   const avatar = fotoU
     ? `<img src="${fotoU}" class="w-8 h-8 rounded-full object-cover">`
@@ -3201,7 +3349,6 @@ function dbGonderiHTML(g) {
       ? `<img src="${listeFoto[0]}" class="w-full aspect-square object-cover">`
       : `<div class="w-full aspect-square flex items-center justify-center p-6 text-center text-xl font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
   const aciklama = listeFoto.length && g.metin ? `<p class="px-1 text-sm"><span class="font-semibold">${esc(g.yazar)}</span> ${esc(g.metin)}</p>` : "";
-  const yorumListe = yorumAgaci(g.yorumlar, g.id);
   return `
       <article class="mb-6 giris">
         <header class="flex items-center gap-2 px-1 pb-2">
@@ -3216,19 +3363,13 @@ function dbGonderiHTML(g) {
         ${g.ses ? `<audio src="${g.ses}" controls loop autoplay class="w-full mt-2"></audio>` : ""}
         <div class="flex items-center gap-4 px-1 pt-2">
           <button data-act="dbBegen" data-id="${g.id}" class="text-xl kalp ${st.kalpAnim == g.id ? "bas" : ""}" aria-label="Beğen">${g.begendim ? "❤️" : "🤍"}</button>
-          <button data-act="dbYorumAc" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
+          <button data-act="yorumPanelAc" data-tur="gonderi" data-id="${g.id}" class="text-xl" aria-label="Yorum">💬</button>
           <button data-act="dbPaylas" data-id="${g.id}" class="text-xl" aria-label="Paylaş">✈️</button>
           <button data-act="dbKaydet" data-id="${g.id}" class="text-xl ml-auto" aria-label="Kaydet">${st.kaydedilen.includes(g.id) ? "🔖" : "📑"}</button>
         </div>
         ${g.begeniGizli && !g.benim ? '<p class="px-1 pt-1 text-sm text-slate-400">Beğeniler gizlendi</p>' : g.benim && g.begenenler.length ? `<div class="px-1 pt-1 flex items-center gap-2 text-sm"><div class="flex -space-x-2">${g.begenenler.slice(0, 3).map((a, i) => `<span class="w-6 h-6 rounded-full border border-[#0d0818] flex items-center justify-center text-[10px] font-bold" style="background:${["#ff2e88", "#00e5ff", "#ffd166"][i % 3]}">${esc((a || "?")[0])}</span>`).join("")}</div><span>${g.begenenler.length === 1 ? `<b>${esc(g.begenenler[0])}</b> beğendi` : `<b>${esc(g.begenenler[0])}</b> ve <b>${g.begenenler.length - 1} kişi daha</b> beğendi`}</span></div>` : `<p class="px-1 pt-1 text-sm font-semibold">${g.begeni} beğeni</p>`}
         ${aciklama}
-        ${g.yorumKapali ? '<p class="px-1 pt-1 text-xs text-slate-500">Yorumlar kapatıldı</p>' : `<button data-act="dbYorumAc" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>`}
-        ${acik ? `
-          <div class="space-y-1 px-1 pt-2">${yorumListe}</div>
-          ${g.yorumKapali ? "" : `<div class="flex gap-2 pt-2">
-            <input id="dbyorum-${g.id}" maxlength="150" placeholder="Yorum yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-xs outline-none focus:border-cyan-400">
-            <button data-act="dbYorumGonder" data-id="${g.id}" class="px-3 rounded-full bg-cyan-400 text-black text-xs font-bold">Gönder</button>
-          </div>`}` : ""}
+        ${g.yorumKapali ? '<p class="px-1 pt-1 text-xs text-slate-500">Yorumlar kapatıldı</p>' : `<button data-act="yorumPanelAc" data-tur="gonderi" data-id="${g.id}" class="px-1 pt-1 text-xs text-slate-400">${g.yorumlar.length ? g.yorumlar.length + " yorumun tümünü gör" : "Yorum yaz"}</button>`}
       </article>`;
 }
 
@@ -3237,6 +3378,7 @@ async function reelYukle() {
   if (!sb || !st.kullanici) return;
   const {data} = await sb.from("reeller").select("id,user_id,yazar,metin,url,tip,sarki").order("created_at", {ascending: false}).limit(30);
   st.dbReeller = (data || []).map(r => ({db: true, id: r.id, benim: r.user_id === st.kullanici.id, yazar: r.yazar || "kullanici", metin: r.metin || "", url: r.url, tip: r.tip, sarki: r.sarki, begeni: 0, begendim: false}));
+  await reelEtkilesimYukle();
 }
 
 async function reelYukleDosya(f, metin, sarki) {
@@ -3563,7 +3705,7 @@ function reelsAc() {
           <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
           <div class="absolute right-3 bottom-28 flex flex-col items-center gap-5 text-white">
             <button data-act="reelBegen" data-i="${i}" class="flex flex-col items-center text-2xl">${r.begendim ? "❤️" : "🤍"}<span class="text-[11px] mt-0.5">${r.begeni || 0}</span></button>
-            <button class="flex flex-col items-center text-2xl">💬<span class="text-[11px] mt-0.5">0</span></button>
+            ${r.db ? `<button data-act="yorumPanelAc" data-tur="reel" data-id="${r.id}" class="flex flex-col items-center text-2xl" aria-label="Yorumlar">💬<span class="text-[11px] mt-0.5">${r.yorumSayi || 0}</span></button>` : ""}
             <button data-act="profilPaylas" class="flex flex-col items-center text-2xl">↗️<span class="text-[11px] mt-0.5">Paylaş</span></button>
             ${r.db ? `<button data-act="reelGonder" data-id="${r.id}" class="flex flex-col items-center text-2xl">✈️<span class="text-[11px] mt-0.5">Gönder</span></button>` : ""}
             <button data-act="reelKaydet" data-i="${i}" class="flex flex-col items-center text-2xl">${r.kaydedildi ? "🔖" : "📑"}<span class="text-[11px] mt-0.5">Kaydet</span></button>
@@ -3814,20 +3956,18 @@ document.addEventListener('click', e => {
     case 'dbBegen': dbBegen(d.id); break;
     case 'dbKaydet': dbKaydet(d.id); break;
     case 'gonderiDetay': gonderiDetay(d.id); break;
-    case 'dbYanitAc': dbYanitAc(d.id); break;
-    case 'dbYanitGonder': dbYanitGonder(d.id, d.ust); break;
     case 'dbHikaye': dbHikayeAc(d.id); break;
     case 'kaydedilenlerAc': kaydedilenlerAc(); break;
     case 'dbGonderiSil': dbGonderiSil(d.id); break;
-    case 'dbYorumAc': st.dbAcikYorum = st.dbAcikYorum == d.id ? null : d.id; render(); break;
-    case 'dbYorumGonder': dbYorumGonder(d.id); break;
+    case 'yorumPanelAc': yorumPanelAc(d.tur, d.id); break;
+    case 'ypKapat': ypKapat(); break;
+    case 'ypGonder': ypGonder(); break;
+    case 'ypBegen': ypBegen(d.id); break;
+    case 'ypYanitAc': ypYanitAc(d.id); break;
+    case 'ypYanitIptal': ypYanitIptal(); break;
     case 'notDuzenle': notDuzenle(); break;
     case 'reelKaydet': { const r = reelListe()[+d.i]; if (r) { r.kaydedildi = !r.kaydedildi; reelsAc(); } break; }
-    case 'reelBegen': {
-      const r = reelListe()[+d.i];
-      if (r) { r.begendim = !r.begendim; r.begeni = (r.begeni || 0) + (r.begendim ? 1 : -1); reelsAc(); }
-      break;
-    }
+    case 'reelBegen': reelBegenIsle(+d.i); break;
     case 'aramaAc': aramaAc(); break;
     case 'aramaYap': aramaYap(); break;
     case 'kameraAc': $('#kameraDosya').click(); break;
@@ -3896,8 +4036,7 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'grupGiris' && st.grupAcik != null) grupGonder(st.grupAcik);
   if (e.target.id === 'aramaGiris') aramaYap();
   if (e.target.id === 'dbMesajGiris') dbMesajGonder();
-  if (e.target.id && e.target.id.indexOf('dbyorum-') === 0) dbYorumGonder(e.target.id.slice(8));
-  if (e.target.id && e.target.id.indexOf('dbyanit-') === 0) dbYanitGonder(st.dbAcikYorum, e.target.id.slice(7));
+  if (e.target.id === 'ypMetin') ypGonder();
   if (e.target.id === 'notGiris') {
     const b = document.querySelector('[data-act="notKaydet"]');
     if (b) b.click();
