@@ -421,7 +421,7 @@ function gonderiHTML(g) {
 
 function akisHTML() {
   const son = sonHikaye();
-  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: son}, ...st.hikayeler];
+  const hikayeler = [{ad: BEN.ad, grad: BEN.grad, benim: true, foto: st.benFoto, hikayeVar: !!son}, ...st.hikayeler];
   const gonderiler = [
     ...st.benGonderiler.map(g => ({...g, benim: true})),
     ...st.gonderiler.filter(g => !engelliAd(g.yazar))
