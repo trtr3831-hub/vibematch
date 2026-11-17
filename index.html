@@ -250,6 +250,10 @@ const st = {
   dbArsiv: [],
   dbHighlight: [],
   hbBegenen: {},
+  takipIstekGelen: [],
+  takipIstekGiden: [],
+  gizliMap: {},
+  listeTur: 'takip',
   yp: null,
   ypVeri: {liste: [], begeniler: []},
   ypBasan: null,
@@ -754,7 +758,7 @@ function ayarlarHTML() {
       <div class="space-y-2">
         <select id="ayarGizlilik" class="${girdi}">
           <option value="herkes" ${st.gizlilik === "herkes" ? "selected" : ""}>Herkese açık</option>
-          <option value="takipci" ${st.gizlilik === "takipci" ? "selected" : ""}>Yalnızca takipçilere açık</option>
+          <option value="takipci" ${st.gizlilik === "takipci" ? "selected" : ""}>Gizli hesap (yalnızca takipçiler görür)</option>
         </select>
         <select id="ayarBegeniGizli" class="${girdi}">
           <option value="0" ${!st.vBegeniGizli ? "selected" : ""}>Yeni gönderilerde beğeni sayısı: herkes görsün</option>
@@ -2156,6 +2160,76 @@ async function reelBegenIsle(i) {
   }
 }
 
+/* ---------- Gizli hesap: takip istekleri ---------- */
+// Gizli hesaba "Takip et" bir istek oluşturur; takipçi kaydı yalnızca onayla oluşur
+async function takipIstekGonder(id) {
+  const {error} = await sb.from("takip_istekleri").insert({istek_eden: st.kullanici.id, hedef: id});
+  if (error) { toast("İstek gönderilemedi: " + error.message); return false; }
+  await sb.from("bildirimler").insert({alici: id, tur: "takip_istegi", metin: BEN.ad + " seni takip etmek istiyor"});
+  toast("Takip isteği gönderildi ⏳");
+  await takipVerileriYukle();
+  return true;
+}
+
+async function takipIstekIptal(id) {
+  const {error} = await sb.from("takip_istekleri").delete().eq("istek_eden", st.kullanici.id).eq("hedef", id);
+  if (error) { toast("İptal edilemedi: " + error.message); return; }
+  toast("İstek iptal edildi");
+  await takipVerileriYukle();
+  if (document.querySelector('[data-kisi="' + id + '"]')) profilGor(id);
+  else if (document.querySelector('[data-liste="1"]')) takipListeAc(st.listeTur);
+}
+
+// Bekleyen isteği onayla: takipçi kaydı işlev tarafından oluşturulur, istek silinir
+async function takipIstegiKabul(istekId) {
+  const istek = st.takipIstekGelen.find(x => x.id == istekId);
+  const {error} = await sb.rpc("takip_istegi_kabul", {istek_id: Number(istekId)});
+  if (error) { toast("Kabul edilemedi: " + error.message); return; }
+  if (istek) await sb.from("bildirimler").insert({alici: istek.uid, tur: "takip", metin: BEN.ad + " takip isteğini kabul etti"});
+  toast("Takip isteği kabul edildi ✅");
+  await takipVerileriYukle();
+  bildirimAc();
+}
+
+async function takipIstegiReddet(istekId) {
+  const {error} = await sb.from("takip_istekleri").delete().eq("id", Number(istekId)).eq("hedef", st.kullanici.id);
+  if (error) { toast("Silinemedi: " + error.message); return; }
+  toast("İstek silindi");
+  await istekleriYukle();
+  bildirimAc();
+}
+
+// Bana gelen ve benim gönderdiğim bekleyen istekler
+async function istekleriYukle() {
+  if (!sb || !st.kullanici) return;
+  const benim = st.kullanici.id;
+  const {data: gelen} = await sb.from("takip_istekleri").select("id,istek_eden,created_at").eq("hedef", benim).order("created_at", {ascending: false});
+  const ids = (gelen || []).map(x => x.istek_eden);
+  const adlar = {};
+  if (ids.length) {
+    const {data: pr} = await sb.from("profiles").select("id,ad,foto").in("id", ids);
+    (pr || []).forEach(p => { adlar[p.id] = p; });
+  }
+  st.takipIstekGelen = (gelen || []).map(x => ({id: x.id, uid: x.istek_eden, ad: (adlar[x.istek_eden] || {}).ad || "Kullanıcı", foto: (adlar[x.istek_eden] || {}).foto}));
+  const {data: giden} = await sb.from("takip_istekleri").select("hedef").eq("istek_eden", benim);
+  st.takipIstekGiden = (giden || []).map(x => x.hedef);
+}
+
+// Bildirimler panelinin üstündeki istek listesi
+function istekHTML() {
+  if (!st.takipIstekGelen.length) return "";
+  return `<div class="mb-5">
+    <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Takip istekleri · ${st.takipIstekGelen.length}</h3>
+    <div class="space-y-2">${st.takipIstekGelen.map(i => `
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+        ${i.foto ? `<img src="${i.foto}" class="w-10 h-10 rounded-full object-cover shrink-0">` : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(i.uid)}">${esc((i.ad || "?")[0])}</div>`}
+        <span class="flex-1 min-w-0 text-sm font-semibold text-white truncate">${esc(i.ad)}</span>
+        <button data-act="istekKabul" data-id="${i.id}" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-xs shrink-0">Onayla</button>
+        <button data-act="istekReddet" data-id="${i.id}" class="px-3 py-1.5 rounded-full border border-white/30 text-white text-xs shrink-0">Sil</button>
+      </div>`).join("")}</div>
+  </div>`;
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -2756,8 +2830,10 @@ function takipciSayisi(p) {
 
 async function takipciYukleKisi(id) {
   const {count} = await sb.from("takipler").select("*", {count: "exact", head: true}).eq("takip_edilen_id", id);
+  const {data: pr} = await sb.from("profiles").select("gizlilik").eq("id", id).maybeSingle();
   st.takipciMap[id] = count || 0;
-  if (document.querySelector('[data-act="takipToggle"][data-id="' + id + '"]')) profilGor(id);
+  st.gizliMap[id] = !!pr && pr.gizlilik === "takipci";
+  if (document.querySelector('[data-kisi="' + id + '"]')) profilGor(id);
 }
 
 function takipciBen() {
@@ -2768,9 +2844,17 @@ function profilGor(id) {
   const p = kisi(id);
   if (!p) return;
   if (sb && st.kullanici && st.dbProfiller[p.id] && !(p.id in st.takipciMap)) takipciYukleKisi(p.id);
-  const takipte = st.takipEdilen.includes(p.id);
+  const takipte = st.takipEdilen.some(x => String(x) === String(p.id));
+  const bekliyor = st.takipIstekGiden.some(x => String(x) === String(p.id));
+  const gizli = !!st.gizliMap[p.id];
+  const dugme = takipte
+    ? `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full border border-white/20 text-white">Takibi bırak</button>`
+    : bekliyor
+      ? `<button data-act="takipIstekIptal" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full border border-white/20 text-white">İstek gönderildi · iptal et</button>`
+      : `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-black">${gizli ? "Takip isteği gönder" : "Takip et"}</button>`;
+  const kilit = gizli && !takipte ? `<p class="mt-4 text-sm text-white">🔒 Bu hesap gizli. Gönderilerini yalnızca takipçileri görebilir.</p>` : "";
   modalAc(`
-    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris" data-kisi="${p.id}">
       <div class="flex items-center justify-between mb-5">
         <h2 class="text-xl font-black">Profil</h2>
         <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
@@ -2782,7 +2866,8 @@ function profilGor(id) {
         <p class="text-sm mt-2">${esc(p.bio)}</p>
         <div class="flex flex-wrap justify-center gap-1.5 mt-3">${p.ilgi.map(i => `<span class="cip ${BEN.ilgi.includes(i) ? "ortak" : ""}">${esc(i)}</span>`).join("")}</div>
         <p class="text-sm text-slate-300 mt-4">👥 <strong>${takipciSayisi(p)}</strong> takipçi</p>
-        <button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full ${takipte ? "border border-white/20" : "bg-gradient-to-r from-pink-500 to-cyan-400 font-bold"}">${takipte ? "Takibi bırak" : "Takip et"}</button>
+        ${dugme}
+        ${kilit}
       </div>
     </div>`);
 }
@@ -2794,6 +2879,10 @@ function takipToggle(id) {
 }
 
 async function await_takip_ekle(id) {
+  if (st.gizliMap[id]) {
+    if (await takipIstekGonder(id)) profilGor(id);
+    return;
+  }
   const {error} = await sb.from("takipler").insert({takipci_id: st.kullanici.id, takip_edilen_id: id});
   if (error) return toast("Takip edilemedi: " + error.message);
   await sb.from("bildirimler").insert({alici: id, tur: "takip", metin: BEN.ad + " seni takip etmeye başladı"});
@@ -2817,9 +2906,10 @@ async function takipListeAc(t) {
   if (!sb || !st.kullanici) { toast("Takip listesi için giriş yapmalısın"); return; }
   const takipci = t === "takipci";
   const benim = st.kullanici.id;
+  st.listeTur = t;
   const kabuk = (icerik, sayi) => modalAc(`
     <div class="absolute inset-0 bg-black/60" data-act="modalKapat"></div>
-    <div class="absolute left-4 right-4 top-16 bottom-24 mx-auto max-w-sm flex flex-col bg-[#0d0818] rounded-3xl border border-white/10 shadow-2xl giris">
+    <div data-liste="1" class="absolute left-4 right-4 top-16 bottom-24 mx-auto max-w-sm flex flex-col bg-[#0d0818] rounded-3xl border border-white/10 shadow-2xl giris">
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
         <h2 class="text-lg font-black">${takipci ? "Takipçiler" : "Takip edilenler"} <span class="text-sm text-slate-400 font-normal">${sayi}</span></h2>
         <button data-act="modalKapat" class="text-slate-400 text-xl" aria-label="Kapat">✕</button>
@@ -2834,14 +2924,16 @@ async function takipListeAc(t) {
   const ids = (iliskiler || []).map(r => (takipci ? r.takipci_id : r.takip_edilen_id));
   let profiller = [];
   if (ids.length) {
-    const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto").in("id", ids);
+    const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto,gizlilik").in("id", ids);
     profiller = data || [];
   }
+  profiller.forEach(p => { st.gizliMap[p.id] = p.gizlilik === "takipci"; });
   // Profil penceresi (kisi) için kayıt
   profiller.forEach(p => { st.dbProfiller[p.id] = {...p, grad: dbGrad(p.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0}; });
 
   const satirlar = profiller.map(p => {
     const takipte = st.takipEdilen.some(x => x == p.id);
+    const bekliyor = st.takipIstekGiden.some(x => x == p.id);
     const avatar = p.foto
       ? `<img src="${p.foto}" class="w-11 h-11 rounded-full object-cover shrink-0">`
       : `<div class="w-11 h-11 rounded-full flex items-center justify-center font-black shrink-0" style="background:${dbGrad(p.id)}">${esc((p.ad || "?")[0])}</div>`;
@@ -2854,7 +2946,7 @@ async function takipListeAc(t) {
             <div class="text-[11px] text-slate-400 truncate">@${esc((p.ad || "").toLowerCase().replace(/\s+/g, ""))}</div>
           </div>
         </button>
-        <button data-act="listeTakip" data-id="${p.id}" data-t="${t}" class="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${takipte ? "border border-white/20" : "bg-gradient-to-r from-pink-500 to-cyan-400 text-black"}">${takipte ? "Takipten çık" : "Takip et"}</button>
+        ${bekliyor ? `<button data-act="takipIstekIptal" data-id="${p.id}" class="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 border border-white/20 text-white">İstek gönderildi</button>` : `<button data-act="listeTakip" data-id="${p.id}" data-t="${t}" class="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${takipte ? "border border-white/20 text-white" : "bg-gradient-to-r from-pink-500 to-cyan-400 text-black"}">${takipte ? "Takipten çık" : (st.gizliMap[p.id] ? "İstek gönder" : "Takip et")}</button>`}
       </div>`;
   }).join("");
   kabuk(satirlar || `<p class="text-center text-slate-400 py-10">${takipci ? "Henüz takipçin yok." : "Henüz kimseyi takip etmiyorsun."}</p>`, profiller.length);
@@ -2868,6 +2960,8 @@ async function listeTakip(id, t) {
     const {error} = await sb.from("takipler").delete().eq("takipci_id", st.kullanici.id).eq("takip_edilen_id", id);
     if (error) { toast("Takipten çıkılamadı: " + error.message); return; }
     toast("Takipten çıkıldı");
+  } else if (st.gizliMap[id]) {
+    if (!(await takipIstekGonder(id))) return;
   } else {
     const {error} = await sb.from("takipler").insert({takipci_id: st.kullanici.id, takip_edilen_id: id});
     if (error) { toast("Takip edilemedi: " + error.message); return; }
@@ -2922,6 +3016,7 @@ function bildirimAc() {
         <h2 class="text-xl font-black">Bildirimler</h2>
         <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
       </div>
+      ${istekHTML()}
       <div class="space-y-2">${liste}</div>
       ${st.bildirimler.length ? '<button data-act="bildirimTemizle" class="mt-4 w-full py-2 rounded-full border border-white/20 text-sm">Hepsini temizle</button>' : ""}
     </div>`);
@@ -3109,6 +3204,7 @@ async function takipVerileriYukle() {
   st.takipEdilen = (data || []).map(r => r.takip_edilen_id);
   const {count} = await sb.from("takipler").select("*", {count: "exact", head: true}).eq("takip_edilen_id", benim);
   st.takipciSayi = count || 0;
+  await istekleriYukle();
   if (st.sekme === 'profil') render();
 }
 
@@ -3970,6 +4066,9 @@ document.addEventListener('click', e => {
     case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
     case 'takipToggle': takipToggle(d.id); break;
     case 'takipListe': takipListeAc(d.t); break;
+    case 'takipIstekIptal': takipIstekIptal(d.id); break;
+    case 'istekKabul': takipIstegiKabul(d.id); break;
+    case 'istekReddet': takipIstegiReddet(d.id); break;
     case 'listeTakip': listeTakip(d.id, d.t); break;
     case 'bildirimAc': bildirimAc(); break;
     case 'bildirimTemizle': st.bildirimler = []; bildirimKaydet(); bildirimRozetGuncelle(); modalKapat(); break;
