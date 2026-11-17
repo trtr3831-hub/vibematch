@@ -607,7 +607,8 @@ function profilHTML() {
 
     <div class="mt-3">
       <div class="font-semibold">${esc(BEN.ad)}, ${BEN.yas}</div>
-      <div class="text-sm mt-1">${esc(BEN.bio)}</div>
+      <div class="text-sm mt-1 whitespace-pre-line">${esc(BEN.bio)}</div>
+      ${profilEkBilgiHTML(BEN)}
     </div>
 
     <div class="flex gap-2 mt-4">
@@ -1853,11 +1854,13 @@ function oynatKapat() {
 // Hesap tercihleri (gizlilik ve gönderi varsayılanları) sunucudan
 async function ayarlarYukle() {
   if (!sb || !st.kullanici) return;
-  const {data} = await sb.from("profiles").select("gizlilik,varsayilan_begeni_gizli,varsayilan_yorum_kapali").eq("id", st.kullanici.id).maybeSingle();
+  const {data} = await sb.from("profiles").select("gizlilik,varsayilan_begeni_gizli,varsayilan_yorum_kapali,web,rozet").eq("id", st.kullanici.id).maybeSingle();
   if (!data) return;
   st.gizlilik = data.gizlilik === "takipci" ? "takipci" : "herkes";
   st.vBegeniGizli = !!data.varsayilan_begeni_gizli;
   st.vYorumKapali = !!data.varsayilan_yorum_kapali;
+  BEN.web = data.web || "";
+  BEN.rozet = data.rozet || "";
   if (st.sekme === "profil") render();
 }
 
@@ -2363,6 +2366,24 @@ async function hikayeGoruntuleyenler(sid) {
       </div>
       <div class="space-y-2">${satirlar || '<p class="text-center text-slate-400 py-10">Henüz kimse izlemedi.</p>'}</div>
     </div>`);
+}
+
+/* ---------- Profil: biyografi, web sitesi, rozet ---------- */
+const ROZETLER = ["", "Dijital İçerik Üreticisi", "Fotoğrafçı", "İşletme", "Müzisyen", "Sanatçı", "Öğrenci Kulübü"];
+
+// Link: yalnızca http/https; "https://" eksikse eklenir
+function webTemizle(v) {
+  let t = (v || "").trim().slice(0, 120);
+  if (!t) return "";
+  if (!/^https?:\/\//i.test(t)) t = "https://" + t;
+  return t;
+}
+
+// Profil bilgisi kartı: rozet ve link (kendi ve başkalarının profilinde)
+function profilEkBilgiHTML(p) {
+  const rozet = p.rozet ? `<span class="inline-block mt-2 text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-pink-500/30 to-cyan-400/30 border border-white/20 text-white">🏷️ ${esc(p.rozet)}</span>` : "";
+  const web = p.web ? `<a href="${esc(p.web)}" target="_blank" rel="noopener noreferrer" class="block mt-2 text-sm text-cyan-300 underline break-all">🔗 ${esc(p.web.replace(/^https?:\/\//i, ""))}</a>` : "";
+  return rozet + web;
 }
 
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
@@ -2999,7 +3020,8 @@ function profilGor(id) {
         <div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black" style="background:${p.grad}">${esc(p.ad[0])}</div>
         <h3 class="mt-3 text-2xl font-black">${esc(p.ad)}, ${p.yas}</h3>
         <p class="text-sm text-slate-400">📍 ${esc(p.sehir)} · ${esc(p.bolum)}</p>
-        <p class="text-sm mt-2">${esc(p.bio)}</p>
+        <p class="text-sm mt-2 whitespace-pre-line">${esc(p.bio)}</p>
+        ${profilEkBilgiHTML(p)}
         <div class="flex flex-wrap justify-center gap-1.5 mt-3">${p.ilgi.map(i => `<span class="cip ${BEN.ilgi.includes(i) ? "ortak" : ""}">${esc(i)}</span>`).join("")}</div>
         <p class="text-sm text-slate-300 mt-4">👥 <strong>${takipciSayisi(p)}</strong> takipçi</p>
         ${dugme}
@@ -3060,7 +3082,7 @@ async function takipListeAc(t) {
   const ids = (iliskiler || []).map(r => (takipci ? r.takipci_id : r.takip_edilen_id));
   let profiller = [];
   if (ids.length) {
-    const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto,gizlilik").in("id", ids);
+    const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto,gizlilik,web,rozet").in("id", ids);
     profiller = data || [];
   }
   profiller.forEach(p => { st.gizliMap[p.id] = p.gizlilik === "takipci"; });
@@ -3359,7 +3381,7 @@ async function aramaYap() {
   if (!sb) { kutu.innerHTML = '<p class="text-xs text-slate-400">Arama için sunucu bağlantısı gerekir.</p>'; return; }
   if (q.length < 2) { kutu.innerHTML = '<p class="text-xs text-slate-400">En az 2 harf yazın.</p>'; return; }
   const benimId = st.kullanici ? st.kullanici.id : "00000000-0000-0000-0000-000000000000";
-  let sorgu = sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto").neq("id", benimId).limit(handle ? 200 : 20);
+  let sorgu = sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto,web,rozet").neq("id", benimId).limit(handle ? 200 : 20);
   if (!handle) sorgu = sorgu.ilike("ad", "%" + q + "%");
   const {data: ham2, error} = await sorgu;
   const data = handle ? (ham2 || []).filter(p => (p.ad || "").toLowerCase().replace(/\s+/g, "").includes(q)).slice(0, 20) : ham2;
@@ -4008,8 +4030,16 @@ function profilDuzenleAc() {
         </div>
         <div>
           <label class="text-xs text-slate-400">Kısa açıklama (bio)</label>
-          <textarea id="ayarBio" maxlength="120" rows="2" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
+          <textarea id="ayarBio" maxlength="150" rows="3" class="w-full mt-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${esc(BEN.bio)}</textarea>
           <button data-act="aiBio" class="mt-1 text-xs text-cyan-300 underline">✨ Yapay zekâyla bio öner</button>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Web sitesi / link</label>
+          <input id="ayarWeb" maxlength="120" value="${esc(BEN.web || "")}" placeholder="ornek.com" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Rozet / kategori</label>
+          <select id="ayarRozet" class="w-full mt-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400">${ROZETLER.map(r => `<option value="${esc(r)}" ${(BEN.rozet || "") === r ? "selected" : ""}>${r || "Rozet yok"}</option>`).join("")}</select>
         </div>
         <p id="ayarMesaj" class="text-xs text-center min-h-[1rem]"></p>
         <button data-act="ayarKaydet" class="w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold">Kaydet</button>
@@ -4027,16 +4057,22 @@ function ayarMesaj(t, hata) {
 async function ayarKaydet() {
   const ad = document.getElementById("ayarAd").value.trim();
   const yas = parseInt(document.getElementById("ayarYas").value, 10);
-  const bio = document.getElementById("ayarBio").value.trim().slice(0, 120);
+  const bio = document.getElementById("ayarBio").value.trim().slice(0, 150);
+  const web = webTemizle(document.getElementById("ayarWeb").value);
+  const rozet = document.getElementById("ayarRozet").value;
   if (!ad) return ayarMesaj("Adınızı yazın.", true);
   if (!(yas >= 18 && yas <= 99)) return ayarMesaj("Yaş 18 ile 99 arasında olmalı.", true);
   if (sb && st.kullanici) {
     const {error} = await sb.auth.updateUser({data: {ad, yas, bio}});
     if (error) return ayarMesaj(hataMetni(error), true);
+    const {error: pe} = await sb.from("profiles").update({web, rozet}).eq("id", st.kullanici.id);
+    if (pe) return ayarMesaj("Kaydedilemedi: " + pe.message, true);
   }
   BEN.ad = ad;
   BEN.yas = yas;
   BEN.bio = bio;
+  BEN.web = web;
+  BEN.rozet = rozet;
   if (st.kullanici) st.kullanici.ad = ad;
   modalKapat();
   toast("Profilin güncellendi ✅");
