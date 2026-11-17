@@ -736,21 +736,8 @@ function ayarlarHTML() {
 }
 
 /* Yaş hesabı: doğum tarihinden bugüne kadar kaç yıl geçtiği */
-function yasHesapla(dogum) {
-  const b = new Date(dogum);
-  const n = new Date();
-  let y = n.getFullYear() - b.getFullYear();
-  const ay = n.getMonth() - b.getMonth();
-  if (ay < 0 || (ay === 0 && n.getDate() < b.getDate())) y--;
-  return y;
-}
 
 /* Doğum tarihi alanında seçilebilecek en son tarih: bugünden 18 yıl önce */
-function enAzYasTarihi() {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 18);
-  return d.toISOString().slice(0, 10);
-}
 
 /* ---------- Engelleme, şikayet ve fotoğraf kuralları ---------- */
 const SIKAYET_NEDENLERI = ["Sahte profil", "Uygunsuz fotoğraf", "Taciz veya tehdit", "Dolandırıcılık veya reklam", "Yaşının 18'den küçük olduğu şüphesi", "Diğer"];
@@ -976,9 +963,6 @@ function adminOnay(t, islem) {
   render();
 }
 
-function okuObje(anahtar) {
-  try { return JSON.parse(localStorage.getItem(anahtar) || "{}"); } catch (err) { return {}; }
-}
 
 function bildirimlerHTML() {
   const liste = (bildirimListesi()[st.oturum] || []).slice(-10).reverse();
