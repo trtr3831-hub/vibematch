@@ -765,6 +765,7 @@ function ayarlarHTML() {
       <button data-act="cikis" class="w-full py-2.5 rounded-full border border-white/20 text-sm">Çıkış yap</button>
     </section>
 
+    <section><button data-act="istatistikAc" class="w-full py-3 rounded-xl bg-white/10 font-semibold text-sm">📊 Hesap istatistikleri</button></section>
     <section>
       <h3 class="text-xs uppercase tracking-widest text-slate-400 mb-2">Gizlilik</h3>
       <div class="space-y-2">
@@ -2575,6 +2576,70 @@ function profilEkBilgiHTML(p) {
   return rozet + web;
 }
 
+/* ---------- Hesap istatistikleri (yalnızca sahibine) ---------- */
+// Ziyaretçi, bakılan profilin sahibine gün başına bir kez kaydedilir
+async function profilZiyaretKaydet(hedefId) {
+  await sb.from("profil_ziyaretleri").upsert([{hedef: hedefId}], {onConflict: "ziyaret_eden,hedef,gun", ignoreDuplicates: true});
+}
+
+// Bugünden geriye doğru gün (YYYY-AA-GG)
+function gunTarihi(geriGun) {
+  const d = new Date();
+  d.setDate(d.getDate() - geriGun);
+  return d.toISOString().slice(0, 10);
+}
+
+function istatKart(etiket, sayi) {
+  return `<div class="p-3 rounded-2xl bg-white/5 border border-white/10 text-center"><div class="text-xl font-black text-white">${sayi}</div><div class="text-[10px] text-slate-300">${etiket}</div></div>`;
+}
+
+async function istatistikAc() {
+  if (!sb || !st.kullanici) { toast("İstatistik için giriş yapmalısın"); return; }
+  modalAc('<div class="h-full bg-[#0d0818] p-6 giris"><p class="text-center text-slate-400 py-10">Yükleniyor…</p></div>');
+  const benim = st.kullanici.id;
+  const [zr, gr] = await Promise.all([
+    sb.from("profil_ziyaretleri").select("ziyaret_eden,gun").eq("hedef", benim).gte("gun", gunTarihi(6)),
+    sb.from("gonderiler").select("id").eq("user_id", benim)
+  ]);
+  const ziyaretler = zr.data || [];
+  const ids = (gr.data || []).map(g => g.id);
+  let begeni = 0, yorum = 0;
+  if (ids.length) {
+    const [b, y] = await Promise.all([
+      sb.from("begeniler").select("gonderi_id").in("gonderi_id", ids),
+      sb.from("yorumlar").select("id").in("gonderi_id", ids)
+    ]);
+    begeni = (b.data || []).length;
+    yorum = (y.data || []).length;
+  }
+  const gunler = [...Array(7)].map((_, i) => gunTarihi(6 - i));
+  const sayilar = gunler.map(g => ziyaretler.filter(z => z.gun === g).length);
+  const enCok = Math.max(1, ...sayilar);
+  const benzersiz = new Set(ziyaretler.map(z => z.ziyaret_eden)).size;
+  const grafik = gunler.map((g, i) => `<div class="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+      <span class="text-[10px] text-slate-300">${sayilar[i]}</span>
+      <div class="w-full rounded-t-md bg-gradient-to-t from-pink-500 to-cyan-400" style="height:${Math.max(2, Math.round(sayilar[i] / enCok * 100))}px"></div>
+      <span class="text-[10px] text-slate-400">${new Date(g + "T12:00:00").toLocaleDateString("tr-TR", {weekday: "short"})}</span>
+    </div>`).join("");
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center gap-3 mb-5">
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Geri">←</button>
+        <h2 class="text-xl font-black">Hesap istatistikleri</h2>
+      </div>
+      <p class="text-[11px] text-slate-400 mb-4">Bu bilgiler yalnızca sana görünür · son 7 gün</p>
+      <div class="grid grid-cols-3 gap-2 mb-5">
+        ${istatKart("Ziyaret (kişi-gün)", ziyaretler.length)}
+        ${istatKart("Farklı kişi", benzersiz)}
+        ${istatKart("Gönderi", ids.length)}
+        ${istatKart("Toplam beğeni", begeni)}
+        ${istatKart("Toplam yorum", yorum)}
+      </div>
+      <p class="text-sm font-semibold mb-2">Profil ziyaretleri</p>
+      <div class="flex items-stretch gap-1 h-44 p-3 rounded-2xl bg-white/5 border border-white/10">${grafik}</div>
+    </div>`);
+}
+
 /* ---------- Gönderi: paylaş, ⋯ menüsü, düzenle, beğenileri gizle ---------- */
 async function dbPaylas(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
@@ -3190,6 +3255,7 @@ function profilGor(id) {
   const p = kisi(id);
   if (!p) return;
   if (sb && st.kullanici && st.dbProfiller[p.id] && !(p.id in st.takipciMap)) takipciYukleKisi(p.id);
+  if (sb && st.kullanici && st.dbProfiller[p.id] && String(p.id) !== String(st.kullanici.id)) profilZiyaretKaydet(p.id);
   const takipte = st.takipEdilen.some(x => String(x) === String(p.id));
   const bekliyor = st.takipIstekGiden.some(x => String(x) === String(p.id));
   const gizli = !!st.gizliMap[p.id];
@@ -4336,6 +4402,7 @@ document.addEventListener('click', e => {
     case 'kasaPinFormAc': kasaPinFormAc(); break;
     case 'kasaPinKaydet': kasaPinKaydet(); break;
     case 'kasaCikar': kasaCikar(d.id); break;
+    case 'istatistikAc': istatistikAc(); break;
     case 'kayitliAc': kayitliAc(d.id); break;
     case 'kayitliGor': kayitliGor(d.id); break;
     case 'kayitliCikar': kayitliCikar(d.id); break;
