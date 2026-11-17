@@ -3329,35 +3329,90 @@ function takipciBen() {
 
 function profilGor(id) {
   const p = kisi(id);
-  if (!p) return;
+  if (!p) { if (sb && st.kullanici) profilYukleVeAc(id); return; }
   if (sb && st.kullanici && st.dbProfiller[p.id] && !(p.id in st.takipciMap)) takipciYukleKisi(p.id);
   if (sb && st.kullanici && st.dbProfiller[p.id] && String(p.id) !== String(st.kullanici.id)) profilZiyaretKaydet(p.id);
+  const benim = !!st.kullanici && String(p.id) === String(st.kullanici.id);
   const takipte = st.takipEdilen.some(x => String(x) === String(p.id));
   const bekliyor = st.takipIstekGiden.some(x => String(x) === String(p.id));
   const gizli = !!st.gizliMap[p.id];
-  const dugme = takipte
-    ? `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full border border-white/20 text-white">Takibi bırak</button>`
+  const dugme = benim ? "" : takipte
+    ? `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full border border-white/20 text-white font-semibold">Takiptesin</button>`
     : bekliyor
       ? `<button data-act="takipIstekIptal" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full border border-white/20 text-white">İstek gönderildi · iptal et</button>`
-      : `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-black">${gizli ? "Takip isteği gönder" : "Takip et"}</button>`;
-  const kilit = gizli && !takipte ? `<p class="mt-4 text-sm text-white">🔒 Bu hesap gizli. Gönderilerini yalnızca takipçileri görebilir.</p>` : "";
+      : `<button data-act="takipToggle" data-id="${p.id}" class="mt-4 w-full py-3 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 font-bold text-black">${gizli ? "Takip isteği gönder" : "Takip Et"}</button>`;
+  const avatar = p.foto
+    ? `<img src="${p.foto}" class="w-28 h-28 rounded-full object-cover">`
+    : `<div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black" style="background:${p.grad}">${esc((p.ad || "?")[0])}</div>`;
+  const kilit = gizli && !takipte && !benim;
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris" data-kisi="${p.id}">
-      <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center gap-3 mb-5">
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Geri">←</button>
         <h2 class="text-xl font-black">Profil</h2>
-        <button data-act="modalKapat" class="kapat-tus" aria-label="Kapat">✕</button>
       </div>
       <div class="flex flex-col items-center text-center">
-        <div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black" style="background:${p.grad}">${esc(p.ad[0])}</div>
-        <h3 class="mt-3 text-2xl font-black">${esc(p.ad)}, ${p.yas}</h3>
-        <p class="text-sm text-slate-400">📍 ${esc(p.sehir)} · ${esc(p.bolum)}</p>
-        <p class="text-sm mt-2 whitespace-pre-line">${esc(p.bio)}</p>
+        ${avatar}
+        <h3 class="mt-3 text-2xl font-black">${esc(p.ad)}${p.yas ? ", " + p.yas : ""}</h3>
+        <p class="text-sm text-slate-400">${p.sehir ? "📍 " + esc(p.sehir) : ""}${p.bolum ? " · " + esc(p.bolum) : ""}</p>
+        <p class="text-sm mt-2 whitespace-pre-line">${esc(p.bio || "")}</p>
         ${profilEkBilgiHTML(p)}
-        <div class="flex flex-wrap justify-center gap-1.5 mt-3">${p.ilgi.map(i => `<span class="cip ${BEN.ilgi.includes(i) ? "ortak" : ""}">${esc(i)}</span>`).join("")}</div>
-        <p class="text-sm text-slate-300 mt-4">👥 <strong>${takipciSayisi(p)}</strong> takipçi</p>
-        ${dugme}
-        ${kilit}
       </div>
+      <div class="grid grid-cols-3 text-center mt-5">
+        <div><div class="font-black text-lg" id="kgGonderiSayi">…</div><div class="text-[11px] text-slate-400">gönderi</div></div>
+        <div><div class="font-black text-lg">${takipciSayisi(p)}</div><div class="text-[11px] text-slate-400">takipçi</div></div>
+        <div><div class="font-black text-lg" id="kgTakipSayi">…</div><div class="text-[11px] text-slate-400">takip</div></div>
+      </div>
+      ${dugme}
+      ${kilit ? '<p class="mt-5 text-sm text-center text-white">🔒 Bu hesap gizli. Gönderilerini yalnızca takipçileri görebilir.</p>' : '<div id="kgIzgara" class="grid grid-cols-3 gap-1 mt-5"></div>'}
+    </div>`);
+  kisiVerileriYukle(p.id, kilit);
+}
+
+// Kişinin gönderi ve takip sayıları, gönderi ızgarası (gizli değilse)
+async function kisiVerileriYukle(id, kilit) {
+  if (!sb || !st.kullanici) return;
+  const [gs, takip] = await Promise.all([
+    sb.from("gonderiler").select("id,foto,fotolar,metin").eq("user_id", id).order("created_at", {ascending: false}).limit(60),
+    sb.from("takipler").select("*", {count: "exact", head: true}).eq("takipci_id", id)
+  ]);
+  if (!document.querySelector('[data-kisi="' + id + '"]')) return;
+  const liste = gs.data || [];
+  const g1 = document.getElementById("kgGonderiSayi");
+  if (g1) g1.textContent = liste.length;
+  const t1 = document.getElementById("kgTakipSayi");
+  if (t1) t1.textContent = takip.count || 0;
+  const izgara = document.getElementById("kgIzgara");
+  if (!izgara || kilit) return;
+  izgara.innerHTML = liste.length
+    ? liste.map(g => {
+        const f = (g.fotolar && g.fotolar[0]) || g.foto;
+        return `<button data-act="kisiGonderi" data-id="${g.id}" class="aspect-square rounded-lg overflow-hidden bg-white/5">${f ? `<img src="${f}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-center justify-center text-center">${esc((g.metin || "").slice(0, 60))}</div>`}</button>`;
+      }).join("")
+    : '<p class="col-span-3 text-center text-slate-400 py-8 text-sm">Henüz gönderi yok.</p>';
+}
+
+// Akışta olmayan bir kişinin profili: veritabanından alınır, sonra açılır
+async function profilYukleVeAc(id) {
+  const {data} = await sb.from("profiles").select("id,ad,yas,sehir,bolum,bio,foto,gizlilik,web,rozet").eq("id", id).maybeSingle();
+  if (!data) { toast("Profil bulunamadı"); return; }
+  st.dbProfiller[data.id] = {...data, grad: dbGrad(data.id), ilgi: [], vibe: "", not: "", sarki: 0, puan: 0};
+  profilGor(data.id);
+}
+
+// Izgaradaki gönderi: büyük görünüm (← ile profile döner)
+async function kisiGonderi(id) {
+  const {data} = await sb.from("gonderiler").select("id,foto,fotolar,metin").eq("id", Number(id)).maybeSingle();
+  if (!data) { toast("Gönderi açılamadı"); return; }
+  const f = (data.fotolar && data.fotolar[0]) || data.foto;
+  modalAc(`
+    <div class="h-full bg-black overflow-y-auto p-4 giris">
+      <div class="flex items-center gap-3 mb-4">
+        <button data-act="modalKapat" class="kapat-tus" aria-label="Geri">←</button>
+        <h2 class="text-lg font-black">Gönderi</h2>
+      </div>
+      ${f ? `<img src="${f}" class="w-full rounded-2xl object-contain">` : ""}
+      ${data.metin ? `<p class="text-sm mt-3">${esc(data.metin)}</p>` : ""}
     </div>`);
 }
 
@@ -3939,9 +3994,9 @@ function dbGonderiHTML(g) {
   return `
       <article class="mb-6 giris">
         <header class="flex items-center gap-2 px-1 pb-2">
-          ${avatar}
+          ${g.benim ? avatar : `<button data-act="profilGor" data-id="${g.sahip}" class="shrink-0">${avatar}</button>`}
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold truncate">${esc(g.yazar)}${g.benim ? " (sen)" : ""}</div>
+            ${g.benim ? `<div class="text-sm font-semibold truncate">${esc(g.yazar)} (sen)</div>` : `<button data-act="profilGor" data-id="${g.sahip}" class="text-sm font-semibold truncate block max-w-full text-left">${esc(g.yazar)}</button>`}
             <div class="text-[11px] text-slate-400">${esc(g.sehir)} · ${g.zaman}</div>
           </div>
           <button data-act="gonderiMenu" data-id="${g.id}" class="text-lg px-1" aria-label="Gönderi seçenekleri">⋯</button>
@@ -4526,6 +4581,7 @@ document.addEventListener('click', e => {
     case 'aramaYap': aramaYap(); break;
     case 'kameraAc': $('#kameraDosya').click(); break;
     case 'profilGor': profilGor(d.id); break;
+    case 'kisiGonderi': kisiGonderi(d.id); break;
     case 'profilPaylas': { try { navigator.clipboard.writeText(location.href); toast('Bağlantı kopyalandı 🔗'); } catch (err) { toast('Bağlantı: ' + location.href); } break; }
     case 'takipToggle': takipToggle(d.id); break;
     case 'takipListe': takipListeAc(d.t); break;
