@@ -454,10 +454,10 @@ function profilGonderiHTML() {
   const artiKutu = `<button data-act="gonderiEkle" class="aspect-square rounded-lg border border-dashed border-white/30 flex flex-col items-center justify-center text-xs text-slate-400"><span class="text-2xl">＋</span>Gönderi</button>`;
   if (benimDb) {
     return `<div class="grid grid-cols-3 gap-1">${artiKutu}${benimDb.map(g => `
-      <div class="aspect-square rounded-lg overflow-hidden relative" style="background:${g.grad}">
+      <button data-act="gonderiDetay" data-id="${g.id}" class="block w-full aspect-square rounded-lg overflow-hidden relative" style="background:${g.grad}">
         ${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : `<div class="w-full h-full p-2 text-[11px] font-semibold flex items-end">${esc(g.metin)}</div>`}
         <span class="absolute bottom-1 right-1 text-[10px] bg-black/50 rounded px-1">❤️ ${g.begeni}</span>
-      </div>`).join("")}</div>`;
+      </button>`).join("")}</div>`;
   }
   const yerel = st.benGonderiler;
   return `<div class="grid grid-cols-3 gap-1">${artiKutu}${yerel.map(g => `
@@ -2642,6 +2642,42 @@ function kaydedilenlerAc() {
     </div>`);
 }
 
+async function gonderiDetay(id) {
+  if (!sb || !st.kullanici) return;
+  const g = st.dbGonderiler.find(x => x.id == id);
+  if (!g) return;
+  const {data: begs} = await sb.from("begeniler").select("user_id").eq("gonderi_id", id);
+  const ids = (begs || []).map(b => b.user_id);
+  const adlar = {};
+  if (ids.length) {
+    const {data: pr} = await sb.from("profiles").select("id,ad").in("id", ids);
+    (pr || []).forEach(p => { adlar[p.id] = p.ad; });
+  }
+  const listeFoto = (g.fotolar && g.fotolar.length) ? g.fotolar : (g.foto ? [g.foto] : []);
+  const medya = listeFoto.length
+    ? `<img src="${listeFoto[0]}" class="w-full rounded-2xl object-cover">`
+    : `<div class="w-full aspect-square rounded-2xl flex items-center justify-center p-6 text-center text-lg font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
+  const begenenler = ids.length
+    ? ids.map(u => `<div class="text-sm py-1">${esc(adlar[u] || "Kullanıcı")}</div>`).join("")
+    : '<p class="text-xs text-slate-500">Henüz beğeni yok</p>';
+  const yorumlar = g.yorumlar.length
+    ? g.yorumlar.map(y => `<div class="text-sm py-1"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(y.created_at)}</span></div>`).join("")
+    : '<p class="text-xs text-slate-500">Henüz yorum yok</p>';
+  modalAc(`
+    <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-black">Gönderi</h2>
+        <button data-act="modalKapat" class="text-slate-400 text-xl">✕</button>
+      </div>
+      ${medya}
+      ${g.metin && listeFoto.length ? `<p class="text-sm mt-3">${esc(g.metin)}</p>` : ""}
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">❤️ ${ids.length} beğeni</h3>
+      ${begenenler}
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">💬 ${g.yorumlar.length} yorum</h3>
+      ${yorumlar}
+    </div>`);
+}
+
 async function dbBegen(id) {
   const g = st.dbGonderiler.find(x => x.id == id);
   if (!g) return;
@@ -3279,6 +3315,7 @@ document.addEventListener('click', e => {
     case 'reelAc': reelAc(d.id); break;
     case 'dbBegen': dbBegen(d.id); break;
     case 'dbKaydet': dbKaydet(d.id); break;
+    case 'gonderiDetay': gonderiDetay(d.id); break;
     case 'dbHikaye': dbHikayeAc(d.id); break;
     case 'kaydedilenlerAc': kaydedilenlerAc(); break;
     case 'dbGonderiSil': dbGonderiSil(d.id); break;
