@@ -251,6 +251,8 @@ const st = {
   dbArsiv: [],
   dbHighlight: [],
   hbBegenen: {},
+  modalYigin: [],
+  modalBaslik: '',
   takipIstekGelen: [],
   takipIstekGiden: [],
   gizliMap: {},
@@ -1471,15 +1473,38 @@ function toast(m) {
 
 function modalAc(html) {
   const m = $('#modal');
-  m.innerHTML = html;
+  const baslik = ((html.match(/<h[23][^>]*>([^<]*)</) || [])[1] || "").trim();
+  // Başlığı olan bir ekranın üstüne başka bir ekran açılırsa, geri dönülebilsin diye önceki ekran saklanır
+  if (!m.classList.contains('hidden') && st.modalBaslik && baslik !== st.modalBaslik) {
+    st.modalYigin.push({html: m.innerHTML, baslik: st.modalBaslik});
+    if (st.modalYigin.length > 8) st.modalYigin.shift();
+  }
+  st.modalBaslik = baslik;
+  // ✕ ya da ← yoksa, ortak kapatma düğmesi eklenir
+  const kapatli = /✕|←/.test(html)
+    ? html
+    : html + '<button data-act="modalKapat" class="absolute top-3 right-3 z-50 w-9 h-9 rounded-full bg-black/60 text-xl text-white" aria-label="Kapat">✕</button>';
+  m.innerHTML = kapatli;
   m.classList.remove('hidden');
   cevirDOM(m);
 }
 function modalKapat() {
   const m = $('#modal');
+  st.modalYigin = [];
+  st.modalBaslik = '';
   m.innerHTML = '';
   m.style.bottom = '';
   m.classList.add('hidden');
+}
+
+// ✕ / ← / "Vazgeç" düğmeleri: bir önceki ekrana döner; yoksa kapatır
+function modalGeri() {
+  const onceki = st.modalYigin.pop();
+  if (!onceki) { modalKapat(); return; }
+  const m = $('#modal');
+  st.modalBaslik = onceki.baslik;
+  m.innerHTML = onceki.html;
+  cevirDOM(m);
 }
 
 /* ---------- Kaydırma (swipe) ---------- */
@@ -3982,7 +4007,7 @@ document.addEventListener('click', e => {
     case 'begen': swipe('sag'); break;
     case 'yenile': desteOlustur(); render(); break;
     case 'kartmuzik': st.kartCalan = !st.kartCalan; render(); break;
-    case 'modalKapat': modalKapat(); break;
+    case 'modalKapat': modalGeri(); break;
     case 'sohbetAc': modalKapat(); sohbetAc(d.id); render(); break;
     case 'sohbetKapat': st.sohbetId = null; render(); break;
     case 'gonder': gonder(d.id); break;
