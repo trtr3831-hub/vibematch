@@ -256,6 +256,12 @@ const st = {
   modalYigin: [],
   modalBaslik: '',
   takipIstekGelen: [],
+  kayitSekme: 'liste',
+  kasaAcik: false,
+  kasaOgeler: [],
+  kasaDeneme: 0,
+  kasaKilitBitis: 0,
+  kasaPinFormu: false,
   takipIstekGiden: [],
   gizliMap: {},
   listeTur: 'takip',
@@ -1897,10 +1903,193 @@ async function oynatYanitGonder(uid) {
   oynatGoster();
 }
 
-/* ---------- Kaydedilenler (profil sekmesi) ---------- */
+/* ---------- Kaydedilenler ve gizli kasa (profil sekmesi) ---------- */
+const KASA_GIRDI = "w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-sm outline-none focus:border-cyan-400";
+
+// Kaydedilenler sekmesinin başı: liste ya da gizli kasa
+function kayitliHTML() {
+  const sekme = (s, etiket) => `<button data-act="kayitSekme" data-s="${s}" class="flex-1 py-2 rounded-full text-sm font-semibold ${st.kayitSekme === s ? "bg-white/15 text-white" : "text-slate-300"}">${etiket}</button>`;
+  return `<div class="flex gap-2 mt-2 mb-3">${sekme("liste", "🔖 Kaydedilenler")}${sekme("kasa", "🔒 Gizli kasa")}</div>`
+    + (st.kayitSekme === "kasa" ? kasaHTML() : kayitListeHTML());
+}
+
+// PIN özeti: kullanıcıya özel tuz ile SHA-256 (PIN düz metin olarak saklanmaz)
+function kasaSifre(p) {
+  return hashle("kasa:" + st.kullanici.id + ":" + p);
+}
+
+function kasaMesaj(t, hata) {
+  const m = document.getElementById("kasaMesaj");
+  if (!m) return;
+  m.textContent = t;
+  m.className = "text-xs text-center min-h-[1rem] " + (hata ? "text-rose-300" : "text-emerald-300");
+}
+
+function kasaHTML() {
+  const geri = `<div class="flex items-center gap-3 mb-3"><button data-act="kayitSekme" data-s="liste" class="kapat-tus" aria-label="Geri">←</button><span class="font-semibold">Gizli kasa</span></div>`;
+  if (st.kasaPinHash === undefined) return geri + `<p class="text-center text-slate-400 py-10 text-sm">Yükleniyor…</p>`;
+  if (!st.kasaPinHash) {
+    return geri + `<div class="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+      <p class="text-sm font-semibold">Gizli kasa için PIN oluştur</p>
+      <p class="text-[11px] text-slate-400">4 ile 6 rakam. PIN'i unutursan kasaya erişemezsin.</p>
+      <input id="kasaPin1" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" class="${KASA_GIRDI}">
+      <input id="kasaPin2" type="password" inputmode="numeric" maxlength="6" placeholder="PIN (tekrar)" class="${KASA_GIRDI}">
+      <button data-act="kasaKur" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-sm">PIN'i oluştur</button>
+      <p id="kasaMesaj" class="text-xs text-center min-h-[1rem]"></p>
+    </div>`;
+  }
+  if (!st.kasaAcik) {
+    const kilitli = Date.now() < st.kasaKilitBitis;
+    return geri + `<div class="space-y-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+      <p class="text-sm font-semibold">Kasa kilitli</p>
+      <input id="kasaPinGiris" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" ${kilitli ? "disabled" : ""} class="${KASA_GIRDI}">
+      <button data-act="kasaAc" ${kilitli ? "disabled" : ""} class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-sm disabled:opacity-50">Kilidi aç</button>
+      <p id="kasaMesaj" class="text-xs text-center min-h-[1rem] ${kilitli ? "text-rose-300" : ""}">${kilitli ? "Çok fazla yanlış deneme. Bir dakika bekle." : ""}</p>
+    </div>`;
+  }
+  return geri + `
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs text-emerald-300">Kasa açık</span>
+      <button data-act="kasaKilitle" class="text-xs px-3 py-1.5 rounded-full border border-white/20 text-white">🔒 Kilitle</button>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      ${st.kasaOgeler.map(o => `
+        <div class="relative aspect-square rounded-lg overflow-hidden bg-white/5">
+          <img src="${o.foto}" class="w-full h-full object-cover">
+          <button data-act="kasaCikar" data-id="${o.id}" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-xs" aria-label="Kasadan çıkar">✕</button>
+        </div>`).join("")}
+      <label class="aspect-square rounded-lg border border-dashed border-white/30 flex items-center justify-center text-2xl text-white cursor-pointer">＋<input id="kasaDosya" type="file" accept="image/*" class="hidden"></label>
+    </div>
+    <button data-act="kasaPinFormAc" class="mt-4 w-full py-2.5 rounded-full border border-white/20 text-white text-sm">PIN'i değiştir</button>
+    ${st.kasaPinFormu ? `<div class="space-y-2 mt-3 p-4 rounded-2xl bg-white/5 border border-white/10">
+      <input id="kasaEskiPin" type="password" inputmode="numeric" maxlength="6" placeholder="Mevcut PIN" class="${KASA_GIRDI}">
+      <input id="kasaYeniPin1" type="password" inputmode="numeric" maxlength="6" placeholder="Yeni PIN" class="${KASA_GIRDI}">
+      <input id="kasaYeniPin2" type="password" inputmode="numeric" maxlength="6" placeholder="Yeni PIN (tekrar)" class="${KASA_GIRDI}">
+      <button data-act="kasaPinKaydet" class="w-full py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold text-sm">PIN'i güncelle</button>
+    </div>` : ""}
+    <p id="kasaMesaj" class="text-xs text-center min-h-[1rem]"></p>`;
+}
+
+function kayitSekmeAc(s) {
+  st.kayitSekme = s;
+  if (s === "kasa" && st.kasaPinHash === undefined) { kasaYukle(); return; }
+  render();
+}
+
+async function kasaYukle() {
+  if (!sb || !st.kullanici) return;
+  const {data, error} = await sb.from("kasa_ayar").select("pin_hash").eq("user_id", st.kullanici.id).maybeSingle();
+  if (error) { toast("Kasa yüklenemedi: " + error.message); st.kasaPinHash = null; render(); return; }
+  st.kasaPinHash = data ? data.pin_hash : null;
+  render();
+}
+
+async function kasaOgeYukle() {
+  const {data} = await sb.from("kasa_ogeleri").select("id,foto,created_at").eq("user_id", st.kullanici.id).order("created_at", {ascending: false});
+  st.kasaOgeler = data || [];
+}
+
+function kasaPinGecerli(p) {
+  return /^\d{4,6}$/.test(p);
+}
+
+async function kasaKur() {
+  const p1 = (document.getElementById("kasaPin1").value || "").trim();
+  const p2 = (document.getElementById("kasaPin2").value || "").trim();
+  if (!kasaPinGecerli(p1)) return kasaMesaj("PIN 4 ile 6 rakam olmalı.", true);
+  if (p1 !== p2) return kasaMesaj("İki PIN aynı değil.", true);
+  const h = await kasaSifre(p1);
+  const {error} = await sb.from("kasa_ayar").upsert({user_id: st.kullanici.id, pin_hash: h});
+  if (error) return kasaMesaj("Kaydedilemedi: " + error.message, true);
+  st.kasaPinHash = h;
+  st.kasaAcik = true;
+  st.kasaDeneme = 0;
+  await kasaOgeYukle();
+  toast("Gizli kasa oluşturuldu 🔒");
+  render();
+}
+
+async function kasaAc() {
+  if (Date.now() < st.kasaKilitBitis) return kasaMesaj("Çok fazla yanlış deneme. Bir dakika bekle.", true);
+  const p = (document.getElementById("kasaPinGiris").value || "").trim();
+  const h = await kasaSifre(p);
+  if (h !== st.kasaPinHash) {
+    st.kasaDeneme++;
+    if (st.kasaDeneme >= 5) {
+      st.kasaDeneme = 0;
+      st.kasaKilitBitis = Date.now() + 60000;
+      return render();
+    }
+    return kasaMesaj("Yanlış PIN (" + st.kasaDeneme + "/5).", true);
+  }
+  st.kasaDeneme = 0;
+  st.kasaAcik = true;
+  await kasaOgeYukle();
+  render();
+}
+
+function kasaKilitle() {
+  st.kasaAcik = false;
+  st.kasaOgeler = [];
+  st.kasaPinFormu = false;
+  render();
+}
+
+function kasaPinFormAc() {
+  st.kasaPinFormu = !st.kasaPinFormu;
+  render();
+}
+
+async function kasaPinKaydet() {
+  const eski = (document.getElementById("kasaEskiPin").value || "").trim();
+  const y1 = (document.getElementById("kasaYeniPin1").value || "").trim();
+  const y2 = (document.getElementById("kasaYeniPin2").value || "").trim();
+  if ((await kasaSifre(eski)) !== st.kasaPinHash) return kasaMesaj("Mevcut PIN yanlış.", true);
+  if (!kasaPinGecerli(y1)) return kasaMesaj("Yeni PIN 4 ile 6 rakam olmalı.", true);
+  if (y1 !== y2) return kasaMesaj("Yeni PIN'ler aynı değil.", true);
+  const h = await kasaSifre(y1);
+  const {error} = await sb.from("kasa_ayar").upsert({user_id: st.kullanici.id, pin_hash: h});
+  if (error) return kasaMesaj("Güncellenemedi: " + error.message, true);
+  st.kasaPinHash = h;
+  st.kasaPinFormu = false;
+  toast("PIN güncellendi ✅");
+  render();
+}
+
+// Galeriden seçilen fotoğraf kasaya eklenir (küçültülüp kaydedilir)
+async function kasaDosyaEkle(girdi) {
+  const f = girdi.files[0];
+  girdi.value = "";
+  if (!f || !sb || !st.kullanici) return;
+  try {
+    const veri = await gorselKucult(f, 800);
+    const {error} = await sb.from("kasa_ogeleri").insert({foto: veri});
+    if (error) { toast("Eklenemedi: " + error.message); return; }
+    toast("Kasaya eklendi 🔒");
+    await kasaOgeYukle();
+    render();
+  } catch (err) {
+    toast("Görsel yüklenemedi");
+  }
+}
+
+async function kasaCikar(id) {
+  const {data, error} = await sb.from("kasa_ogeleri").delete().eq("id", Number(id)).eq("user_id", st.kullanici.id).select("id");
+  if (error || !data || !data.length) { toast("Çıkarılamadı: " + (error ? error.message : "yetki yok")); return; }
+  toast("Kasadan çıkarıldı");
+  await kasaOgeYukle();
+  render();
+}
+
+document.addEventListener("change", e => {
+  if (e.target.id === "kasaDosya") kasaDosyaEkle(e.target);
+});
+
+/* Kaydedilenler (profil sekmesi) */
 function profilSekme(s) {
   st.profilSekme = s;
-  if (s === 'kayit') { kaydedilenYukle(); return; }
+  if (s !== "kayit") { st.kasaAcik = false; st.kasaOgeler = []; st.kasaPinFormu = false; }
+  if (s === "kayit") { kaydedilenYukle(); return; }
   render();
 }
 
@@ -1922,7 +2111,7 @@ async function kaydedilenYukle() {
   if (st.sekme === 'profil') render();
 }
 
-function kayitliHTML() {
+function kayitListeHTML() {
   const liste = st.dbKayitli || [];
   if (!liste.length) return `<p class="text-center text-slate-400 py-10 text-sm">Henüz kaydettiğin bir gönderi yok. Gönderide 📑 simgesine dokun.</p>`;
   return `<div class="grid grid-cols-3 gap-1 mt-2">${liste.map(g => `
@@ -4140,6 +4329,13 @@ document.addEventListener('click', e => {
     case 'begeniGizle': begeniGizle(d.id); break;
     case 'yorumKapat': yorumKapat(d.id); break;
     case 'profilSekme': profilSekme(d.s); break;
+    case 'kayitSekme': kayitSekmeAc(d.s); break;
+    case 'kasaKur': kasaKur(); break;
+    case 'kasaAc': kasaAc(); break;
+    case 'kasaKilitle': kasaKilitle(); break;
+    case 'kasaPinFormAc': kasaPinFormAc(); break;
+    case 'kasaPinKaydet': kasaPinKaydet(); break;
+    case 'kasaCikar': kasaCikar(d.id); break;
     case 'kayitliAc': kayitliAc(d.id); break;
     case 'kayitliGor': kayitliGor(d.id); break;
     case 'kayitliCikar': kayitliCikar(d.id); break;
