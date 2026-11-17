@@ -507,10 +507,6 @@ function sohbetHTML(id) {
     </div>
     <div class="flex justify-end gap-4 text-xs py-1"><button data-act="sikayetAc" data-tur="kisi" data-id="${id}" data-ad="${esc(p.ad)}" class="text-slate-400">🚩 Şikayet et</button><button data-act="engelleAc" data-id="${id}" class="text-slate-400">🚫 Engelle</button></div>
     <div class="flex-1 space-y-2 py-3">${m.map((x, i) => balon(x, i, id)).join('')}</div>
-    <div class="flex gap-2 mb-2">
-      <button data-act="aiTanisma" data-id="${id}" class="flex-1 py-1.5 rounded-full border border-white/20 text-xs">✨ İlk mesaj önerisi</button>
-    </div>
-    <div id="aiKutu" class="space-y-1 mb-2"></div>
     <div class="flex gap-2 pt-2 pb-1 sticky bottom-0 bg-[#0d0818]">
       <button data-act="sohbetFotoSec" class="px-3 rounded-full border border-white/20 text-sm">📷</button>
       <input type="file" id="sohbetDosya" accept="image/*" class="hidden">
@@ -4236,48 +4232,6 @@ document.addEventListener("input", e => {
   }, 350);
 });
 
-/* ---------- Yapay zekâ (Cloudflare ara katmanı üzerinden) ---------- */
-const AI_URL = "https://vibematch-ai.trtr3831.workers.dev";
-
-async function aiIste(gorev, istem) {
-  const r = await fetch(AI_URL, {
-    method: "POST",
-    headers: {"content-type": "application/json"},
-    body: JSON.stringify({gorev, istem}),
-  });
-  const veri = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(veri.hata || "Yapay zekâ şu an yanıt vermiyor.");
-  return veri.metin || "";
-}
-
-function aiKutuYaz(satirlar, hedefInput) {
-  const kutu = document.getElementById("aiKutu");
-  if (!kutu) return;
-  if (!satirlar.length) { kutu.innerHTML = ""; return; }
-  kutu.innerHTML = satirlar.map((s, i) =>
-    `<button data-act="aiSec" data-i="${i}" class="w-full text-left text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10">${esc(s)}</button>`
-  ).join("");
-  kutu.dataset.hedef = hedefInput || "mesajGiris";
-  kutu._satirlar = satirlar;
-}
-
-function aiSatirTemizle(s) {
-  return s.replace(/^\s*(\d+[.)]|Nazik:|Eğlenceli:|-)\s*/i, "").trim();
-}
-
-async function aiTanisma(id) {
-  const p = kisi(id);
-  if (!p) return;
-  const istem = `Eşleştiğim kişi: ${p.ad}, ${p.yas} yaşında, ${p.bolum}. Açıklaması: "${p.bio}". İlgi alanları: ${p.ilgi.join(", ")}. Benim ilgi alanlarım: ${BEN.ilgi.join(", ")}. Bu kişiye ilk mesaj önerileri ver.`;
-  toast("Öneriler hazırlanıyor ✨");
-  try {
-    const metin = await aiIste("tanisma", istem);
-    aiKutuYaz(metin.split("\n").map(aiSatirTemizle).filter(Boolean), "mesajGiris");
-  } catch (err) { toast(err.message || "Bir hata oldu"); }
-}
-
-
-
 /* ---------- Reels (bu cihazda, sayfa açıkken) ---------- */
 function reelListe() {
   return (sb && st.kullanici) ? st.dbReeller : st.reels;
@@ -4602,14 +4556,6 @@ document.addEventListener('click', e => {
     case 'grupAc': st.grupAcik = +d.id; render(); break;
     case 'grupKapat': st.grupAcik = null; render(); break;
     case 'grupGonder': grupGonder(d.id); break;
-    case 'aiTanisma': aiTanisma(d.id); break;
-    case 'aiSec': {
-      const kutu = document.getElementById('aiKutu');
-      const satir = kutu && kutu._satirlar ? kutu._satirlar[+d.i] : '';
-      const hedef = document.getElementById(kutu && kutu.dataset.hedef === 'ayarBio' ? 'ayarBio' : 'mesajGiris');
-      if (hedef && satir) { hedef.value = satir; hedef.focus(); }
-      break;
-    }
     case 'reelsEkle': reelFormAc(); break;
     case 'reelFormDosyaSec': $('#reelsDosya').click(); break;
     case 'reelFormGonder': reelFormGonder(); break;
