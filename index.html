@@ -236,6 +236,7 @@ const st = {
   kaydedilen: [],
   dbHikayeler: [],
   gfFotolar: [],
+  dbYanitAcik: null,
   arsiv: [],
   oneCikanlar: [],
   dbMesajlar: [],
@@ -2567,17 +2568,19 @@ async function gonderiYukle() {
   const benim = st.kullanici.id;
   const {data: gs} = await sb.from("gonderiler").select("id,user_id,yazar,sehir,metin,foto,fotolar,ses,created_at").order("created_at", {ascending: false}).limit(30);
   const ids = (gs || []).map(g => g.id);
-  let begeniler = [], yorumlar = [];
+  let begeniler = [], yorumlar = [], sayiMap = {};
   if (ids.length) {
     const b = await sb.from("begeniler").select("gonderi_id,user_id").in("gonderi_id", ids);
     begeniler = b.data || [];
-    const y = await sb.from("yorumlar").select("id,gonderi_id,yazar,metin,created_at").in("gonderi_id", ids).order("created_at", {ascending: true});
+    const y = await sb.from("yorumlar").select("id,gonderi_id,ust_id,yazar,metin,created_at").in("gonderi_id", ids).order("created_at", {ascending: true});
     yorumlar = y.data || [];
+    const sayiRes = await sb.rpc("gonderi_begeni_sayilari", {idler: ids});
+    (sayiRes.data || []).forEach(r => { sayiMap[r.gonderi_id] = r.sayi; });
   }
   st.dbGonderiler = (gs || []).map(g => ({
     id: g.id, sahip: g.user_id, benim: g.user_id === benim, yazar: g.yazar || "Kullanıcı", sehir: g.sehir || "",
     metin: g.metin || "", foto: g.foto, fotolar: g.fotolar || (g.foto ? [g.foto] : []), ses: g.ses, grad: dbGrad(g.user_id), zaman: zamanYaz(g.created_at),
-    begeni: begeniler.filter(x => x.gonderi_id === g.id).length,
+    begeni: sayiMap[g.id] || 0,
     begendim: begeniler.some(x => x.gonderi_id === g.id && x.user_id === benim),
     yorumlar: yorumlar.filter(y => y.gonderi_id === g.id),
   }));
@@ -2646,8 +2649,11 @@ async function gonderiDetay(id) {
   if (!sb || !st.kullanici) return;
   const g = st.dbGonderiler.find(x => x.id == id);
   if (!g) return;
-  const {data: begs} = await sb.from("begeniler").select("user_id").eq("gonderi_id", id);
-  const ids = (begs || []).map(b => b.user_id);
+  const ids = [];
+  if (g.benim) {
+    const {data: begs} = await sb.from("begeniler").select("user_id").eq("gonderi_id", id);
+    (begs || []).forEach(b => ids.push(b.user_id));
+  }
   const adlar = {};
   if (ids.length) {
     const {data: pr} = await sb.from("profiles").select("id,ad").in("id", ids);
@@ -2657,12 +2663,10 @@ async function gonderiDetay(id) {
   const medya = listeFoto.length
     ? `<img src="${listeFoto[0]}" class="w-full rounded-2xl object-cover">`
     : `<div class="w-full aspect-square rounded-2xl flex items-center justify-center p-6 text-center text-lg font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
-  const begenenler = ids.length
+  const begenenler = !g.benim ? '<p class="text-xs text-slate-500">Beğenenleri yalnızca gönderi sahibi görebilir.</p>' : ids.length
     ? ids.map(u => `<div class="text-sm py-1">${esc(adlar[u] || "Kullanıcı")}</div>`).join("")
     : '<p class="text-xs text-slate-500">Henüz beğeni yok</p>';
-  const yorumlar = g.yorumlar.length
-    ? g.yorumlar.map(y => `<div class="text-sm py-1"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(y.created_at)}</span></div>`).join("")
-    : '<p class="text-xs text-slate-500">Henüz yorum yok</p>';
+  const yorumlar = yorumAgaci(g.yorumlar, g.id);
   modalAc(`
     <div class="h-full bg-[#0d0818] overflow-y-auto p-6 giris">
       <div class="flex items-center justify-between mb-4">
@@ -2671,7 +2675,7 @@ async function gonderiDetay(id) {
       </div>
       ${medya}
       ${g.metin && listeFoto.length ? `<p class="text-sm mt-3">${esc(g.metin)}</p>` : ""}
-      <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">❤️ ${ids.length} beğeni</h3>
+      <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">❤️ ${g.begeni} beğeni</h3>
       ${begenenler}
       <h3 class="text-xs uppercase tracking-widest text-slate-400 mt-5 mb-1">💬 ${g.yorumlar.length} yorum</h3>
       ${yorumlar}
@@ -2686,6 +2690,35 @@ async function dbBegen(id) {
     await sb.from("begeniler").insert({gonderi_id: id, user_id: st.kullanici.id});
     if (g.sahip && g.sahip !== st.kullanici.id) await sb.from("bildirimler").insert({alici: g.sahip, tur: "begeni", metin: BEN.ad + " gönderini beğendi ❤️"});
   }
+  gonderiYukle();
+}
+
+function yorumAgaci(liste, gonderiId) {
+  const ustler = liste.filter(y => !y.ust_id);
+  const cevaplar = liste.filter(y => y.ust_id);
+  if (!ustler.length) return '<p class="text-xs text-slate-500">Henüz yorum yok</p>';
+  return ustler.map(y => `
+    <div class="py-1">
+      <div class="text-sm"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(y.created_at)}</span>
+        <button data-act="dbYanitAc" data-id="${y.id}" class="text-[11px] text-slate-400 ml-1">Yanıtla</button></div>
+      ${cevaplar.filter(c => c.ust_id === y.id).map(c => `<div class="ml-6 text-sm mt-1"><span class="font-semibold">${esc(c.yazar)}</span> ${esc(c.metin)} <span class="text-[10px] text-slate-500">${zamanYaz(c.created_at)}</span></div>`).join("")}
+      ${st.dbYanitAcik == y.id ? `<div class="flex gap-2 ml-6 mt-1"><input id="dbyanit-${y.id}" maxlength="150" placeholder="Yanıt yaz…" class="flex-1 bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs outline-none focus:border-cyan-400"><button data-act="dbYanitGonder" data-id="${gonderiId}" data-ust="${y.id}" class="px-3 rounded-full bg-cyan-400 text-black text-xs font-bold">Gönder</button></div>` : ""}
+    </div>`).join("");
+}
+
+function dbYanitAc(id) {
+  st.dbYanitAcik = st.dbYanitAcik == id ? null : id;
+  render();
+}
+
+async function dbYanitGonder(gonderiId, ustId) {
+  const inp = document.getElementById("dbyanit-" + ustId);
+  const t = inp ? inp.value.trim() : "";
+  if (!t) return;
+  const {error} = await sb.from("yorumlar").insert({gonderi_id: Number(gonderiId), ust_id: Number(ustId), yazar: BEN.ad, metin: t.slice(0, 150)});
+  if (error) return toast("Yanıt gönderilemedi: " + error.message);
+  st.dbAcikYorum = Number(gonderiId);
+  st.dbYanitAcik = null;
   gonderiYukle();
 }
 
@@ -2713,7 +2746,7 @@ function dbGonderiHTML(g) {
       ? `<img src="${listeFoto[0]}" class="w-full aspect-square object-cover">`
       : `<div class="w-full aspect-square flex items-center justify-center p-6 text-center text-xl font-bold" style="background:${g.grad}">${esc(g.metin)}</div>`;
   const aciklama = listeFoto.length && g.metin ? `<p class="px-1 text-sm"><span class="font-semibold">${esc(g.yazar)}</span> ${esc(g.metin)}</p>` : "";
-  const yorumListe = g.yorumlar.map(y => `<div class="text-xs"><span class="font-semibold">${esc(y.yazar)}</span> ${esc(y.metin)}</div>`).join("");
+  const yorumListe = yorumAgaci(g.yorumlar, g.id);
   return `
       <article class="mb-6 giris">
         <header class="flex items-center gap-2 px-1 pb-2">
@@ -3316,6 +3349,8 @@ document.addEventListener('click', e => {
     case 'dbBegen': dbBegen(d.id); break;
     case 'dbKaydet': dbKaydet(d.id); break;
     case 'gonderiDetay': gonderiDetay(d.id); break;
+    case 'dbYanitAc': dbYanitAc(d.id); break;
+    case 'dbYanitGonder': dbYanitGonder(d.id, d.ust); break;
     case 'dbHikaye': dbHikayeAc(d.id); break;
     case 'kaydedilenlerAc': kaydedilenlerAc(); break;
     case 'dbGonderiSil': dbGonderiSil(d.id); break;
@@ -3385,6 +3420,7 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'aramaGiris') aramaYap();
   if (e.target.id === 'dbMesajGiris') dbMesajGonder();
   if (e.target.id && e.target.id.indexOf('dbyorum-') === 0) dbYorumGonder(e.target.id.slice(8));
+  if (e.target.id && e.target.id.indexOf('dbyanit-') === 0) dbYanitGonder(st.dbAcikYorum, e.target.id.slice(7));
   if (e.target.id === 'notGiris') {
     const b = document.querySelector('[data-act="notKaydet"]');
     if (b) b.click();
